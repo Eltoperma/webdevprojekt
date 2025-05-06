@@ -1,6 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
+
+const ReactConfetti = dynamic(() => import('react-confetti'), {
+  ssr: false
+});
 
 type Operator = '+' | '-' | '*' | '/';
 type Difficulty = 1 | 2 | 3 | 4;
@@ -17,6 +22,7 @@ interface GameState {
   }>;
   isIntegerResult: boolean;
   difficulty: Difficulty;
+  isCorrect: boolean;
 }
 
 interface Solution {
@@ -120,9 +126,27 @@ export default function MathGame() {
     previousAttempts: [],
     isIntegerResult: true,
     difficulty: 1,
+    isCorrect: false,
   });
 
   const [solutions, setSolutions] = useState<Solution[]>([]);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [windowSize, setWindowSize] = useState({
+    width: typeof window !== 'undefined' ? window.innerWidth : 0,
+    height: typeof window !== 'undefined' ? window.innerHeight : 0,
+  });
+
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowSize({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const calculateResult = (numbers: number[], operators: (Operator | null)[]): { result: number; isInteger: boolean } => {
     if (operators.some(op => op === null)) return { result: 0, isInteger: true };
@@ -287,6 +311,8 @@ export default function MathGame() {
     if (gameState.operators.some(op => op === null)) return;
     
     const { result, isInteger } = calculateResult(gameState.numbers, gameState.operators);
+    const solutions = findAllSolutions(gameState.numbers);
+    const isCorrect = solutions.length === 1 && solutions[0].result === result;
     
     setGameState(prev => ({
       ...prev,
@@ -300,7 +326,13 @@ export default function MathGame() {
       }],
       numbers: generateValidNumbers(),
       operators: [null, null, null, null],
+      isCorrect,
     }));
+
+    if (isCorrect) {
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 3000);
+    }
   };
 
   useEffect(() => {
@@ -315,6 +347,15 @@ export default function MathGame() {
 
   return (
     <div className="p-8 max-w-2xl mx-auto">
+      {showConfetti && (
+        <ReactConfetti
+          width={windowSize.width}
+          height={windowSize.height}
+          recycle={false}
+          numberOfPieces={200}
+        />
+      )}
+      
       <h1 className="text-2xl font-bold mb-6">Mathe Spiel</h1>
       
       {/* Difficulty Selection */}
@@ -449,7 +490,13 @@ export default function MathGame() {
 
       {gameState.result !== null && (
         <div className="text-center">
-          <div className={`text-xl font-bold ${!gameState.isIntegerResult ? 'text-red-500' : ''}`}>
+          <div className={`text-xl font-bold p-4 rounded-lg transition-colors duration-300 ${
+            gameState.isCorrect 
+              ? 'bg-green-100 text-green-700' 
+              : !gameState.isIntegerResult 
+                ? 'text-red-500' 
+                : ''
+          }`}>
             Ergebnis: {gameState.result}
             {!gameState.isIntegerResult && (
               <span className="ml-2 inline-flex items-center">
@@ -466,6 +513,23 @@ export default function MathGame() {
                   />
                 </svg>
                 <span className="ml-1 text-sm">Das Ergebnis muss eine ganze Zahl sein!</span>
+              </span>
+            )}
+            {gameState.isCorrect && (
+              <span className="ml-2 inline-flex items-center text-green-700">
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  className="h-5 w-5" 
+                  viewBox="0 0 20 20" 
+                  fill="currentColor"
+                >
+                  <path 
+                    fillRule="evenodd" 
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" 
+                    clipRule="evenodd" 
+                  />
+                </svg>
+                <span className="ml-1 text-sm">Richtig!</span>
               </span>
             )}
           </div>
