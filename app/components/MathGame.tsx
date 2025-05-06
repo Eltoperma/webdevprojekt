@@ -214,7 +214,25 @@ export default function MathGame() {
 
   const generateValidNumbers = (): number[] => {
     const generateRandomNumbers = (): number[] => {
-      return Array.from({ length: 5 }, () => DIFFICULTY_RULES[gameState.difficulty].generateNumber());
+      const numbers = Array.from({ length: 5 }, () => DIFFICULTY_RULES[gameState.difficulty].generateNumber());
+      
+      // Für Level 3 und 4: Stelle sicher, dass mindestens eine negative Zahl dabei ist
+      if (gameState.difficulty >= 3 && !numbers.some(n => n < 0)) {
+        // Wähle eine zufällige Position und ersetze die Zahl durch eine negative
+        const position = Math.floor(Math.random() * 5);
+        const rand = Math.random();
+        if (rand < 0.4) {
+          numbers[position] = -(Math.floor(Math.random() * 3) + 1); // -1 bis -3
+        } else if (rand < 0.8) {
+          numbers[position] = -(Math.floor(Math.random() * 6) + 4); // -4 bis -9
+        } else if (rand < 0.95) {
+          numbers[position] = -(Math.floor(Math.random() * 50) + 10); // -10 bis -59
+        } else {
+          numbers[position] = -(Math.floor(Math.random() * 40) + 60); // -60 bis -99
+        }
+      }
+      
+      return numbers;
     };
 
     const hasValidCombination = (numbers: number[]): boolean => {
