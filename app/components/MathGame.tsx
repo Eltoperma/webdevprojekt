@@ -131,6 +131,7 @@ export default function MathGame() {
 
   const [solutions, setSolutions] = useState<Solution[]>([]);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
   const [windowSize, setWindowSize] = useState({
     width: typeof window !== 'undefined' ? window.innerWidth : 0,
     height: typeof window !== 'undefined' ? window.innerHeight : 0,
@@ -356,7 +357,27 @@ export default function MathGame() {
         />
       )}
       
-      <h1 className="text-2xl font-bold mb-6">Mathe Spiel</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Mathe Spiel</h1>
+        <button
+          onClick={() => setShowDebug(!showDebug)}
+          className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg flex items-center gap-2 transition-colors"
+        >
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            className="h-5 w-5" 
+            viewBox="0 0 20 20" 
+            fill="currentColor"
+          >
+            <path 
+              fillRule="evenodd" 
+              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" 
+              clipRule="evenodd" 
+            />
+          </svg>
+          {showDebug ? 'Lösungen ausblenden' : 'Lösungen anzeigen'}
+        </button>
+      </div>
       
       {/* Difficulty Selection */}
       <div className="mb-6">
@@ -382,27 +403,29 @@ export default function MathGame() {
       </div>
       
       {/* Debug Solutions */}
-      <div className="mb-6 p-4 bg-gray-100 rounded-lg">
-        <h2 className="text-lg font-semibold mb-2">Debug: Mögliche Lösungen</h2>
-        <div className="space-y-2">
-          {solutions.map((solution, index) => (
-            <div key={index} className="flex items-center space-x-2">
-              <span className="text-sm text-gray-600">#{index + 1}:</span>
-              <div className="flex items-center">
-                {gameState.numbers.map((num, i) => (
-                  <div key={i} className="flex items-center">
-                    <span className="text-sm font-mono">{num}</span>
-                    {i < solution.operators.length && (
-                      <span className="mx-1 text-sm">{solution.operators[i]}</span>
-                    )}
-                  </div>
-                ))}
+      {showDebug && (
+        <div className="mb-6 p-4 bg-gray-100 rounded-lg">
+          <h2 className="text-lg font-semibold mb-2">Debug: Mögliche Lösungen</h2>
+          <div className="space-y-2">
+            {solutions.map((solution, index) => (
+              <div key={index} className="flex items-center space-x-2">
+                <span className="text-sm text-gray-600">#{index + 1}:</span>
+                <div className="flex items-center">
+                  {gameState.numbers.map((num, i) => (
+                    <div key={i} className="flex items-center">
+                      <span className="text-sm font-mono">{num}</span>
+                      {i < solution.operators.length && (
+                        <span className="mx-1 text-sm">{solution.operators[i]}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <span className="text-sm font-bold">= {solution.result}</span>
               </div>
-              <span className="text-sm font-bold">= {solution.result}</span>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
       
       {/* Previous attempts */}
       {gameState.previousAttempts.map((attempt, index) => (
