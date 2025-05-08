@@ -33,6 +33,7 @@ export default function RegisterPage() {
     }
 
     // Eigene Tabelle "user" aktualisieren
+    //@todo eventuell auch über Prisma?
     const userId = data.user?.id;
     if (userId) {
       console.log("User ID:", userId, "Username:", username);
@@ -50,7 +51,7 @@ export default function RegisterPage() {
     }
 
     setLoading(false);
-    router.push("/");
+    router.push("/login");
   };
 
   return (
