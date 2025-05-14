@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
 /* Hier wird der Supabase-Auth-Client verwendet, um die Registrierung zu ermöglichen.
-Es wird außerdem unsere eigene Tabelle "User" verwendet, um die Benutzerprofile parallel anzulegen.
+Außerdem wird unsere eigene Tabelle "user_profile" verwendet, um die Benutzerprofile parallel anzulegen.
  */
 export default function RegisterPage() {
   const supabase = createClientComponentClient();
@@ -14,12 +14,21 @@ export default function RegisterPage() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordConfirm, confirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
     setLoading(true);
     setError("");
+
+    // Passwort-Check
+    if (password !== passwordConfirm) {
+      setError("Die Passwörter stimmen nicht überein.");
+      return;
+    }
+
+    setLoading(true);
 
     const { data, error: signUpError } = await supabase.auth.signUp({
       email,
@@ -34,13 +43,15 @@ export default function RegisterPage() {
 
     // Eigene Tabelle "user" aktualisieren
     //@todo eventuell auch über Prisma?
-    const userId = data.user?.id;
-    if (userId) {
-      console.log("User ID:", userId, "Username:", username);
-      const { error: insertError } = await supabase.from("user").insert({
-        auth_user_id: userId,
-        name: username,
-      });
+    const id = data.user?.id;
+    if (id) {
+      console.log("User ID:", id, "Name:", username);
+      const { error: insertError } = await supabase
+        .from("user_profile")
+        .insert({
+          id: id,
+          name: username,
+        });
 
       if (insertError) {
         setError(
@@ -80,6 +91,14 @@ export default function RegisterPage() {
           placeholder="Passwort"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          className="w-full p-2 border rounded mb-4"
+        />
+
+        <input
+          type="password"
+          placeholder="Passwort wiederholen"
+          value={passwordConfirm}
+          onChange={(e) => confirmPassword(e.target.value)}
           className="w-full p-2 border rounded mb-4"
         />
 
