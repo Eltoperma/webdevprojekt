@@ -7,11 +7,11 @@ import { User } from "@/types/user";
 /* Hier wird der Supabase-Auth-Client verwendet, um die Einstellungen des Benutzers anzuzeigen.
  */
 export default async function SettingsPage() {
-  const supabase = createServerComponentClient({ cookies });
+  const supabaseAuth = createServerComponentClient({ cookies });
   const supabaseClient = createClientComponentClient();
   const {
     data: { session: userSession },
-  } = await supabase.auth.getSession();
+  } = await supabaseAuth.auth.getSession();
 
   if (!userSession) redirect("/login");
 
