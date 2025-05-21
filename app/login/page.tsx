@@ -2,13 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-import { User } from "@/types/user";
+import { supabaseComponentClient } from "@/lib/supabase/supabaseComponentClient";
 
-/* Hier wird der Supabase-Auth-Client verwendet, um die Anmeldung zu ermöglichen.
- */
 export default function LoginPage() {
-  const supabase = createClientComponentClient();
   const router = useRouter();
 
   const [name, setName] = useState("");
@@ -20,37 +16,42 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
 
-    // 1. Hole User-Daten inkl. verknüpfter E-Mail
-    const { data: profileData, error: profileError } = await supabase
-      .from("user_profile")
-      .select()
-      .eq("name", name)
-      .single();
+    try {
+      // 1. Hole E-Mail über geschützte API
+      const res = await fetch("/api/auth/get-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, password }),
+      });
 
-    console.log("Profile Data:", profileData);
+      const { email, error: emailError } = await res.json();
 
-    if (profileError || !profileData?.auth_user?.email) {
-      setError("Benutzername nicht gefunden oder fehlerhafte Zuordnung.");
+      if (!res.ok) {
+        const message =
+          res.status === 500
+            ? "Serverfehler: " + emailError
+            : "Ungültige Anmeldedaten.";
+        setError(message);
+        return;
+      }
+
+      const { error: loginError } =
+        await supabaseComponentClient.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+      if (loginError) {
+        setError("Login fehlgeschlagen: " + loginError.message);
+        return;
+      }
+
+      router.push("/dashboard");
+    } catch (err) {
+      setError("Netzwerkfehler: " + String(err));
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const email = profileData?.auth_user?.email;
-
-    // 2. Login mit E-Mail und Passwort
-    const { error: loginError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (loginError) {
-      setError("Login fehlgeschlagen: " + loginError.message);
-      setLoading(false);
-      return;
-    }
-
-    setLoading(false);
-    router.push("/dashboard");
   };
 
   return (
@@ -59,7 +60,7 @@ export default function LoginPage() {
         <h1 className="text-2xl font-bold mb-4">Login</h1>
 
         <input
-          type="name"
+          type="text"
           placeholder="Name"
           value={name}
           onChange={(e) => setName(e.target.value)}

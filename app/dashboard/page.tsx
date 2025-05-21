@@ -1,15 +1,13 @@
-import { cookies } from "next/headers";
-import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
 import { redirect } from "next/navigation";
+import { supabaseServerClient } from "@/lib/supabase/supabaseServerClient";
 
 /* Hier wird der Supabase-Auth-Client verwendet, um das Dashboard des Benutzers anzuzeigen.
  */
 // @todo Spiel-Highscore und Spiel-Statistiken anzeigen
 export default async function DashboardPage() {
-  const supabase = createServerComponentClient({ cookies });
   const {
     data: { session },
-  } = await supabase.auth.getSession();
+  } = await supabaseServerClient.auth.getSession();
 
   if (!session) redirect("/login");
 

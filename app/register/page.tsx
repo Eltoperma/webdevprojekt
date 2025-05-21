@@ -2,13 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { supabaseComponentClient } from "@/lib/supabase/supabaseComponentClient";
 
-/* Hier wird der Supabase-Auth-Client verwendet, um die Registrierung zu ermöglichen.
-Außerdem wird unsere eigene Tabelle "user_profile" verwendet, um die Benutzerprofile parallel anzulegen.
- */
 export default function RegisterPage() {
-  const supabase = createClientComponentClient();
   const router = useRouter();
 
   const [username, setUsername] = useState("");
@@ -22,47 +18,48 @@ export default function RegisterPage() {
     setLoading(true);
     setError("");
 
-    // Passwort-Check
     if (password !== passwordConfirm) {
       setError("Die Passwörter stimmen nicht überein.");
-      return;
-    }
-
-    setLoading(true);
-
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-
-    if (signUpError) {
-      setError(signUpError.message);
       setLoading(false);
       return;
     }
 
-    // Eigene Tabelle "user" aktualisieren
-    //@todo eventuell auch über Prisma?
-    const id = data.user?.id;
-    if (id) {
-      console.log("User ID:", id, "Name:", username);
-      const { error: insertError } = await supabase
-        .from("user_profile")
-        .insert({
-          id: id,
-          name: username,
+    try {
+      const { data, error: signUpError } =
+        await supabaseComponentClient.auth.signUp({
+          email,
+          password,
         });
 
-      if (insertError) {
-        setError(
-          "Registrierung erfolgreich, aber Profildaten konnten nicht gespeichert werden."
-        );
-        console.error(insertError);
+      if (signUpError) {
+        setError(signUpError.message);
+        return;
       }
-    }
 
-    setLoading(false);
-    router.push("/login");
+      const id = data.user?.id;
+      if (id) {
+        const { error: insertError } = await supabaseComponentClient
+          .from("user_profile")
+          .insert({
+            id,
+            name: username,
+          });
+
+        if (insertError) {
+          console.error(insertError);
+          setError(
+            "Registrierung erfolgreich, aber Profildaten konnten nicht gespeichert werden."
+          );
+          return;
+        }
+      }
+
+      router.push("/login");
+    } catch (err) {
+      setError("Ein Fehler ist aufgetreten: " + String(err));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -71,7 +68,7 @@ export default function RegisterPage() {
         <h1 className="text-2xl font-bold mb-4">Registrieren</h1>
 
         <input
-          type="name"
+          type="text"
           placeholder="Username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
