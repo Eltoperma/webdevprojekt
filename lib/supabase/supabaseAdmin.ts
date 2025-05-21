@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import 'server-only';
+import "server-only";
 
 export const supabaseAdmin = createClient(
   process.env.SUPABASE_URL!,

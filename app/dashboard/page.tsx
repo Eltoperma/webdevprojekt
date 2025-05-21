@@ -1,9 +1,8 @@
 import { redirect } from "next/navigation";
 import { supabaseServerClient } from "@/lib/supabase/supabaseServerClient";
+import DashboardForm from "./DashboardForm";
+import "server-only";
 
-/* Hier wird der Supabase-Auth-Client verwendet, um das Dashboard des Benutzers anzuzeigen.
- */
-// @todo Spiel-Highscore und Spiel-Statistiken anzeigen
 export default async function DashboardPage() {
   const {
     data: { session },
@@ -11,10 +10,15 @@ export default async function DashboardPage() {
 
   if (!session) redirect("/login");
 
-  return (
-    <div className="p-8">
-      <h1 className="text-2xl font-bold center">Dein Dashboard</h1>
-      <p>Hallo {session.user.email}</p>
-    </div>
-  );
+  const { data: user, error } = await supabaseServerClient
+    .from("user_profile")
+    .select("*")
+    .eq("id", session.user.id)
+    .single();
+
+  if (!user || error) {
+    redirect("/login"); // oder Fehler anzeigen
+  }
+
+  return <DashboardForm user={user} />;
 }
