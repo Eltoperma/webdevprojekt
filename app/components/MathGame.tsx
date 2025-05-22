@@ -2,13 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import { Operator, Difficulty } from '../types/math';
+import { generateTask, calculateResult, findAllSolutions, getDifficultyDescription } from '../lib/mathTasks';
 
 const ReactConfetti = dynamic(() => import('react-confetti'), {
   ssr: false
 });
-
-type Operator = '+' | '-' | '*' | '/';
-type Difficulty = 1 | 2 | 3 | 4;
 
 interface GameState {
   numbers: number[];
@@ -23,99 +22,8 @@ interface GameState {
   isIntegerResult: boolean;
   difficulty: Difficulty;
   isCorrect: boolean;
+  lives: number;
 }
-
-interface Solution {
-  operators: Operator[];
-  result: number;
-}
-
-const OPERATORS: Operator[] = ['+', '-', '*', '/'];
-
-const DIFFICULTY_RULES = {
-  1: {
-    description: "Level 1: Nur positive einstellige Zahlen (1-9)",
-    generateNumber: () => {
-      // 70% Chance für 1-3, 30% Chance für 4-9
-      return Math.random() < 0.7 
-        ? Math.floor(Math.random() * 3) + 1  // 1-3
-        : Math.floor(Math.random() * 6) + 4; // 4-9
-    },
-    validateResult: (result: number) => result > 0,
-  },
-  2: {
-    description: "Level 2: Positive ein- und zweistellige Zahlen (1-99)",
-    generateNumber: () => {
-      const rand = Math.random();
-      if (rand < 0.4) {
-        // 40% Chance für 1-3
-        return Math.floor(Math.random() * 3) + 1;
-      } else if (rand < 0.8) {
-        // 40% Chance für 4-9
-        return Math.floor(Math.random() * 6) + 4;
-      } else if (rand < 0.95) {
-        // 15% Chance für 10-59
-        return Math.floor(Math.random() * 50) + 10;
-      } else {
-        // 5% Chance für 60-99
-        return Math.floor(Math.random() * 40) + 60;
-      }
-    },
-    validateResult: (result: number) => result > 0,
-  },
-  3: {
-    description: "Level 3: Positive und negative ein- und zweistellige Zahlen (-99 bis 99)",
-    generateNumber: () => {
-      const rand = Math.random();
-      if (rand < 0.4) {
-        // 40% Chance für -3 bis 3
-        return Math.floor(Math.random() * 7) - 3;
-      } else if (rand < 0.8) {
-        // 40% Chance für -9 bis -4 oder 4 bis 9
-        return Math.random() < 0.5
-          ? Math.floor(Math.random() * 6) + 4
-          : -(Math.floor(Math.random() * 6) + 4);
-      } else if (rand < 0.95) {
-        // 15% Chance für -59 bis -10 oder 10 bis 59
-        return Math.random() < 0.5
-          ? Math.floor(Math.random() * 50) + 10
-          : -(Math.floor(Math.random() * 50) + 10);
-      } else {
-        // 5% Chance für -99 bis -60 oder 60 bis 99
-        return Math.random() < 0.5
-          ? Math.floor(Math.random() * 40) + 60
-          : -(Math.floor(Math.random() * 40) + 60);
-      }
-    },
-    validateResult: (result: number) => result > 0,
-  },
-  4: {
-    description: "Level 4: Positive und negative ein- und zweistellige Zahlen (-99 bis 99)",
-    generateNumber: () => {
-      const rand = Math.random();
-      if (rand < 0.4) {
-        // 40% Chance für -3 bis 3
-        return Math.floor(Math.random() * 7) - 3;
-      } else if (rand < 0.8) {
-        // 40% Chance für -9 bis -4 oder 4 bis 9
-        return Math.random() < 0.5
-          ? Math.floor(Math.random() * 6) + 4
-          : -(Math.floor(Math.random() * 6) + 4);
-      } else if (rand < 0.95) {
-        // 15% Chance für -59 bis -10 oder 10 bis 59
-        return Math.random() < 0.5
-          ? Math.floor(Math.random() * 50) + 10
-          : -(Math.floor(Math.random() * 50) + 10);
-      } else {
-        // 5% Chance für -99 bis -60 oder 60 bis 99
-        return Math.random() < 0.5
-          ? Math.floor(Math.random() * 40) + 60
-          : -(Math.floor(Math.random() * 40) + 60);
-      }
-    },
-    validateResult: (result: number) => true, // Alle Ergebnisse erlaubt, aber Validierung erfolgt in hasValidCombination
-  },
-};
 
 export default function MathGame() {
   const [gameState, setGameState] = useState<GameState>({
@@ -127,11 +35,11 @@ export default function MathGame() {
     isIntegerResult: true,
     difficulty: 1,
     isCorrect: false,
+    lives: 3,
   });
 
-  const [solutions, setSolutions] = useState<Solution[]>([]);
+  const [solutions, setSolutions] = useState<Array<{ operators: Operator[]; result: number }>>([]);
   const [showConfetti, setShowConfetti] = useState(false);
-  const [showDebug, setShowDebug] = useState(false);
   const [windowSize, setWindowSize] = useState({
     width: typeof window !== 'undefined' ? window.innerWidth : 0,
     height: typeof window !== 'undefined' ? window.innerHeight : 0,
@@ -149,159 +57,8 @@ export default function MathGame() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const calculateResult = (numbers: number[], operators: (Operator | null)[]): { result: number; isInteger: boolean } => {
-    if (operators.some(op => op === null)) return { result: 0, isInteger: true };
-    
-    let result = numbers[0];
-    for (let i = 0; i < operators.length; i++) {
-      const operator = operators[i];
-      const nextNumber = numbers[i + 1];
-      
-      switch (operator) {
-        case '+':
-          result += nextNumber;
-          break;
-        case '-':
-          result -= nextNumber;
-          break;
-        case '*':
-          result *= nextNumber;
-          break;
-        case '/':
-          result = result / nextNumber;
-          break;
-      }
-    }
-    return { result, isInteger: Number.isInteger(result) };
-  };
-
-  const findAllSolutions = (numbers: number[]): Solution[] => {
-    const operatorCombinations: Operator[][] = [];
-    const solutions: Solution[] = [];
-    
-    const generateCombinations = (current: Operator[], used: Set<Operator>) => {
-      if (current.length === 4) {
-        operatorCombinations.push([...current]);
-        return;
-      }
-      
-      for (const op of OPERATORS) {
-        if (!used.has(op)) {
-          current.push(op);
-          used.add(op);
-          generateCombinations(current, used);
-          current.pop();
-          used.delete(op);
-        }
-      }
-    };
-    
-    generateCombinations([], new Set());
-
-    for (const operators of operatorCombinations) {
-      const { result, isInteger } = calculateResult(numbers, operators);
-      if (isInteger && DIFFICULTY_RULES[gameState.difficulty].validateResult(result)) {
-        solutions.push({ operators, result });
-      }
-    }
-
-    return solutions.sort((a, b) => a.result - b.result);
-  };
-
   const isOperatorUsed = (operator: Operator): boolean => {
     return gameState.operators.includes(operator);
-  };
-
-  const generateValidNumbers = (): number[] => {
-    const generateRandomNumbers = (): number[] => {
-      const numbers = Array.from({ length: 5 }, () => DIFFICULTY_RULES[gameState.difficulty].generateNumber());
-      
-      // Für Level 3 und 4: Stelle sicher, dass mindestens eine negative Zahl dabei ist
-      if (gameState.difficulty >= 3 && !numbers.some(n => n < 0)) {
-        // Wähle eine zufällige Position und ersetze die Zahl durch eine negative
-        const position = Math.floor(Math.random() * 5);
-        const rand = Math.random();
-        if (rand < 0.4) {
-          numbers[position] = -(Math.floor(Math.random() * 3) + 1); // -1 bis -3
-        } else if (rand < 0.8) {
-          numbers[position] = -(Math.floor(Math.random() * 6) + 4); // -4 bis -9
-        } else if (rand < 0.95) {
-          numbers[position] = -(Math.floor(Math.random() * 50) + 10); // -10 bis -59
-        } else {
-          numbers[position] = -(Math.floor(Math.random() * 40) + 60); // -60 bis -99
-        }
-      }
-      
-      return numbers;
-    };
-
-    const hasValidCombination = (numbers: number[]): boolean => {
-      const solutions = findAllSolutions(numbers);
-      
-      // Wenn keine Lösungen oder mehr als eine Lösung, dann ungültig
-      if (solutions.length !== 1) return false;
-      
-      // Prüfe, ob die gefundene Lösung wirklich die kleinste mögliche Zahl ist
-      const bestSolution = solutions[0];
-      const allPossibleResults = new Set<number>();
-      
-      // Generiere alle möglichen Operator-Kombinationen
-      const operatorCombinations: Operator[][] = [];
-      const generateCombinations = (current: Operator[], used: Set<Operator>) => {
-        if (current.length === 4) {
-          operatorCombinations.push([...current]);
-          return;
-        }
-        
-        for (const op of OPERATORS) {
-          if (!used.has(op)) {
-            current.push(op);
-            used.add(op);
-            generateCombinations(current, used);
-            current.pop();
-            used.delete(op);
-          }
-        }
-      };
-      
-      generateCombinations([], new Set());
-
-      // Berechne alle möglichen Ergebnisse
-      for (const operators of operatorCombinations) {
-        const { result, isInteger } = calculateResult(numbers, operators);
-        if (isInteger && DIFFICULTY_RULES[gameState.difficulty].validateResult(result)) {
-          allPossibleResults.add(result);
-        }
-      }
-
-      // Konvertiere zu Array und sortiere
-      const sortedResults = Array.from(allPossibleResults).sort((a, b) => a - b);
-      
-      // Die Lösung ist nur gültig, wenn sie die kleinste Zahl ist
-      // Bei Level 4 müssen wir auch prüfen, ob es keine andere Kombination gibt, die das gleiche Ergebnis liefert
-      if (gameState.difficulty === 4) {
-        const sameResultCount = Array.from(allPossibleResults).filter(r => r === bestSolution.result).length;
-        if (sameResultCount > 1) return false;
-      }
-      
-      return sortedResults[0] === bestSolution.result;
-    };
-
-    let numbers = generateRandomNumbers();
-    let attempts = 0;
-    const maxAttempts = 1000; // Verhindert Endlosschleifen
-
-    while (!hasValidCombination(numbers) && attempts < maxAttempts) {
-      numbers = generateRandomNumbers();
-      attempts++;
-    }
-
-    if (attempts >= maxAttempts) {
-      // Fallback auf sichere Zahlen
-      return [1, 2, 3, 4, 5];
-    }
-    
-    return numbers;
   };
 
   const handleOperatorClick = (index: number, operator: Operator) => {
@@ -317,48 +74,60 @@ export default function MathGame() {
   };
 
   const handleDifficultyChange = (newDifficulty: Difficulty) => {
+    const task = generateTask(newDifficulty);
     setGameState(prev => ({
       ...prev,
       difficulty: newDifficulty,
-      numbers: generateValidNumbers(),
+      numbers: task.numbers,
       operators: [null, null, null, null],
       result: null,
     }));
   };
 
-  const checkResult = () => {
+  const confirmResult = () => {
     if (gameState.operators.some(op => op === null)) return;
     
-    const { result, isInteger } = calculateResult(gameState.numbers, gameState.operators);
+    const { result, isInteger } = calculateResult(gameState.numbers, gameState.operators as Operator[]);
     const solutions = findAllSolutions(gameState.numbers);
     const isCorrect = solutions.length === 1 && solutions[0].result === result;
     
-    setGameState(prev => ({
-      ...prev,
-      result,
-      isIntegerResult: isInteger,
-      attempts: prev.attempts + 1,
-      previousAttempts: [...prev.previousAttempts, {
-        numbers: prev.numbers,
-        operators: prev.operators,
-        result,
-      }],
-      numbers: generateValidNumbers(),
-      operators: [null, null, null, null],
-      isCorrect,
-    }));
-
     if (isCorrect) {
-      setShowConfetti(true);
-      setTimeout(() => setShowConfetti(false), 3000);
+      // Wenn die Antwort korrekt ist, neue Aufgabe generieren
+      const task = generateTask(gameState.difficulty);
+      setGameState(prev => ({
+        ...prev,
+        numbers: task.numbers,
+        operators: [null, null, null, null],
+        result: null,
+        previousAttempts: [],
+        lives: 3,
+        isCorrect: false,
+      }));
+    } else {
+      // Wenn die Antwort falsch ist
+      const newLives = gameState.lives - 1;
+      
+      // Setze das Ergebnis und den Status
+      setGameState(prev => ({
+        ...prev,
+        result,
+        isIntegerResult: isInteger,
+        isCorrect,
+        previousAttempts: [...prev.previousAttempts, {
+          numbers: prev.numbers,
+          operators: prev.operators,
+          result,
+        }],
+        lives: newLives,
+        // Wenn keine Leben mehr übrig sind, zeige die Lösung
+        ...(newLives <= 0 && {
+          operators: solutions[0].operators,
+          result: solutions[0].result,
+          isCorrect: true
+        })
+      }));
     }
   };
-
-  useEffect(() => {
-    if (gameState.operators.every(op => op !== null)) {
-      checkResult();
-    }
-  }, [gameState.operators]);
 
   useEffect(() => {
     setSolutions(findAllSolutions(gameState.numbers));
@@ -377,24 +146,6 @@ export default function MathGame() {
       
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Mathe Spiel</h1>
-        <button
-          onClick={() => setShowDebug(!showDebug)}
-          className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg flex items-center gap-2 transition-colors"
-        >
-          <svg 
-            xmlns="http://www.w3.org/2000/svg" 
-            className="h-5 w-5" 
-            viewBox="0 0 20 20" 
-            fill="currentColor"
-          >
-            <path 
-              fillRule="evenodd" 
-              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" 
-              clipRule="evenodd" 
-            />
-          </svg>
-          {showDebug ? 'Lösungen ausblenden' : 'Lösungen anzeigen'}
-        </button>
       </div>
       
       {/* Difficulty Selection */}
@@ -416,37 +167,175 @@ export default function MathGame() {
           ))}
         </div>
         <p className="mt-2 text-sm text-gray-600">
-          {DIFFICULTY_RULES[gameState.difficulty].description}
+          {getDifficultyDescription(gameState.difficulty)}
         </p>
       </div>
-      
-      {/* Debug Solutions */}
-      {showDebug && (
-        <div className="mb-6 p-4 bg-gray-100 rounded-lg">
-          <h2 className="text-lg font-semibold mb-2">Debug: Mögliche Lösungen</h2>
-          <div className="space-y-2">
-            {solutions.map((solution, index) => (
-              <div key={index} className="flex items-center space-x-2">
-                <span className="text-sm text-gray-600">#{index + 1}:</span>
-                <div className="flex items-center">
+
+      {/* Current game state */}
+      <div className="mb-6 p-6 bg-white rounded-lg shadow-lg">
+        <div className="flex items-center justify-center space-x-2">
+          {gameState.numbers.map((num, i) => (
+            <div key={i} className="flex items-center">
+              <span className="text-2xl font-mono">{num}</span>
+              {i < gameState.operators.length && (
+                <div className="mx-2">
+                  <button
+                    onClick={() => handleOperatorClick(i, '+')}
+                    disabled={isOperatorUsed('+') || gameState.lives <= 0}
+                    className={`w-8 h-8 rounded ${
+                      gameState.operators[i] === '+' 
+                        ? 'bg-blue-500 text-white' 
+                        : isOperatorUsed('+') || gameState.lives <= 0
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                          : 'bg-gray-200 hover:bg-gray-300'
+                    }`}
+                  >
+                    +
+                  </button>
+                  <button
+                    onClick={() => handleOperatorClick(i, '-')}
+                    disabled={isOperatorUsed('-') || gameState.lives <= 0}
+                    className={`w-8 h-8 rounded ${
+                      gameState.operators[i] === '-' 
+                        ? 'bg-blue-500 text-white' 
+                        : isOperatorUsed('-') || gameState.lives <= 0
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                          : 'bg-gray-200 hover:bg-gray-300'
+                    }`}
+                  >
+                    -
+                  </button>
+                  <button
+                    onClick={() => handleOperatorClick(i, '*')}
+                    disabled={isOperatorUsed('*') || gameState.lives <= 0}
+                    className={`w-8 h-8 rounded ${
+                      gameState.operators[i] === '*' 
+                        ? 'bg-blue-500 text-white' 
+                        : isOperatorUsed('*') || gameState.lives <= 0
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                          : 'bg-gray-200 hover:bg-gray-300'
+                    }`}
+                  >
+                    ×
+                  </button>
+                  <button
+                    onClick={() => handleOperatorClick(i, '/')}
+                    disabled={isOperatorUsed('/') || gameState.lives <= 0}
+                    className={`w-8 h-8 rounded ${
+                      gameState.operators[i] === '/' 
+                        ? 'bg-blue-500 text-white' 
+                        : isOperatorUsed('/') || gameState.lives <= 0
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                          : 'bg-gray-200 hover:bg-gray-300'
+                    }`}
+                  >
+                    ÷
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+          <button
+            onClick={confirmResult}
+            disabled={gameState.operators.some(op => op === null) || gameState.lives <= 0}
+            className={`ml-4 w-12 h-12 rounded-lg text-2xl font-bold ${
+              gameState.operators.some(op => op === null) || gameState.lives <= 0
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-blue-500 hover:bg-blue-600 text-white'
+            }`}
+          >
+            =
+          </button>
+        </div>
+
+        {/* Lives display */}
+        <div className="mt-4 flex justify-center items-center gap-2">
+          <span className="text-sm font-semibold">Leben:</span>
+          {[...Array(3)].map((_, i) => (
+            <svg
+              key={i}
+              xmlns="http://www.w3.org/2000/svg"
+              className={`h-6 w-6 ${i < gameState.lives ? 'text-red-500' : 'text-gray-300'}`}
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fillRule="evenodd"
+                d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"
+                clipRule="evenodd"
+              />
+            </svg>
+          ))}
+        </div>
+
+        {gameState.result !== null && (
+          <div className="mt-4 text-center">
+            {gameState.lives <= 0 ? (
+              <div className="p-4 bg-gray-100 rounded-lg">
+                <h2 className="text-lg font-semibold mb-2">Lösung:</h2>
+                <div className="flex items-center justify-center space-x-2">
                   {gameState.numbers.map((num, i) => (
                     <div key={i} className="flex items-center">
-                      <span className="text-sm font-mono">{num}</span>
-                      {i < solution.operators.length && (
-                        <span className="mx-1 text-sm">{solution.operators[i]}</span>
+                      <span className="text-xl font-mono">{num}</span>
+                      {i < solutions[0].operators.length && (
+                        <span className="mx-2 text-xl">{solutions[0].operators[i]}</span>
                       )}
                     </div>
                   ))}
+                  <span className="ml-4 text-xl font-bold">= {solutions[0].result}</span>
                 </div>
-                <span className="text-sm font-bold">= {solution.result}</span>
               </div>
-            ))}
+            ) : (
+              <div className={`text-xl font-bold p-4 rounded-lg transition-colors duration-300 ${
+                gameState.isCorrect 
+                  ? 'bg-green-100 text-green-700' 
+                  : !gameState.isIntegerResult 
+                    ? 'text-red-500' 
+                    : ''
+              }`}>
+                Ergebnis: {gameState.result}
+                {!gameState.isIntegerResult && (
+                  <span className="ml-2 inline-flex items-center">
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      className="h-5 w-5" 
+                      viewBox="0 0 20 20" 
+                      fill="currentColor"
+                    >
+                      <path 
+                        fillRule="evenodd" 
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" 
+                        clipRule="evenodd" 
+                      />
+                    </svg>
+                    <span className="ml-1 text-sm">Das Ergebnis muss eine ganze Zahl sein!</span>
+                  </span>
+                )}
+                {gameState.isCorrect && (
+                  <span className="ml-2 inline-flex items-center text-green-700">
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      className="h-5 w-5" 
+                      viewBox="0 0 20 20" 
+                      fill="currentColor"
+                    >
+                      <path 
+                        fillRule="evenodd" 
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" 
+                        clipRule="evenodd" 
+                      />
+                    </svg>
+                    <span className="ml-1 text-sm">Richtig!</span>
+                  </span>
+                )}
+              </div>
+            )}
           </div>
-        </div>
-      )}
-      
+        )}
+      </div>
+
       {/* Previous attempts */}
-      {gameState.previousAttempts.map((attempt, index) => (
+      {[...gameState.previousAttempts].reverse().map((attempt, index) => (
         <div key={index} className="mb-4 p-4 bg-gray-100 rounded-lg opacity-50">
           <div className="flex items-center justify-center space-x-2">
             {attempt.numbers.map((num, i) => (
@@ -461,121 +350,6 @@ export default function MathGame() {
           </div>
         </div>
       ))}
-
-      {/* Current game state */}
-      <div className="mb-6 p-6 bg-white rounded-lg shadow-lg">
-        <div className="flex items-center justify-center space-x-2">
-          {gameState.numbers.map((num, i) => (
-            <div key={i} className="flex items-center">
-              <span className="text-2xl font-mono">{num}</span>
-              {i < gameState.operators.length && (
-                <div className="mx-2">
-                  <button
-                    onClick={() => handleOperatorClick(i, '+')}
-                    disabled={isOperatorUsed('+')}
-                    className={`w-8 h-8 rounded ${
-                      gameState.operators[i] === '+' 
-                        ? 'bg-blue-500 text-white' 
-                        : isOperatorUsed('+')
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          : 'bg-gray-200 hover:bg-gray-300'
-                    }`}
-                  >
-                    +
-                  </button>
-                  <button
-                    onClick={() => handleOperatorClick(i, '-')}
-                    disabled={isOperatorUsed('-')}
-                    className={`w-8 h-8 rounded ${
-                      gameState.operators[i] === '-' 
-                        ? 'bg-blue-500 text-white' 
-                        : isOperatorUsed('-')
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          : 'bg-gray-200 hover:bg-gray-300'
-                    }`}
-                  >
-                    -
-                  </button>
-                  <button
-                    onClick={() => handleOperatorClick(i, '*')}
-                    disabled={isOperatorUsed('*')}
-                    className={`w-8 h-8 rounded ${
-                      gameState.operators[i] === '*' 
-                        ? 'bg-blue-500 text-white' 
-                        : isOperatorUsed('*')
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          : 'bg-gray-200 hover:bg-gray-300'
-                    }`}
-                  >
-                    ×
-                  </button>
-                  <button
-                    onClick={() => handleOperatorClick(i, '/')}
-                    disabled={isOperatorUsed('/')}
-                    className={`w-8 h-8 rounded ${
-                      gameState.operators[i] === '/' 
-                        ? 'bg-blue-500 text-white' 
-                        : isOperatorUsed('/')
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          : 'bg-gray-200 hover:bg-gray-300'
-                    }`}
-                  >
-                    ÷
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {gameState.result !== null && (
-        <div className="text-center">
-          <div className={`text-xl font-bold p-4 rounded-lg transition-colors duration-300 ${
-            gameState.isCorrect 
-              ? 'bg-green-100 text-green-700' 
-              : !gameState.isIntegerResult 
-                ? 'text-red-500' 
-                : ''
-          }`}>
-            Ergebnis: {gameState.result}
-            {!gameState.isIntegerResult && (
-              <span className="ml-2 inline-flex items-center">
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  className="h-5 w-5" 
-                  viewBox="0 0 20 20" 
-                  fill="currentColor"
-                >
-                  <path 
-                    fillRule="evenodd" 
-                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" 
-                    clipRule="evenodd" 
-                  />
-                </svg>
-                <span className="ml-1 text-sm">Das Ergebnis muss eine ganze Zahl sein!</span>
-              </span>
-            )}
-            {gameState.isCorrect && (
-              <span className="ml-2 inline-flex items-center text-green-700">
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  className="h-5 w-5" 
-                  viewBox="0 0 20 20" 
-                  fill="currentColor"
-                >
-                  <path 
-                    fillRule="evenodd" 
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" 
-                    clipRule="evenodd" 
-                  />
-                </svg>
-                <span className="ml-1 text-sm">Richtig!</span>
-              </span>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 } 
