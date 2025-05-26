@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabaseComponentClient } from "@/lib/supabase/supabaseComponentClient";
+import { supabaseBrowserClient } from "@/lib/supabase/supabaseComponentClient";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -25,8 +25,32 @@ export default function RegisterPage() {
     }
 
     try {
+      if (username.length < 3) {
+        setError("Der Benutzername muss mindestens 3 Zeichen lang sein.");
+        setLoading(false);
+        return;
+      }
+      if (username.length > 28) {
+        setError("Der Benutzername darf maximal 28 Zeichen lang sein.");
+        setLoading(false);
+        return;
+      }
+
+      // überprüfen, ob der Benutzername bereits existiert
+      const { data: preexistingUser } = await supabaseBrowserClient
+        .from("user_profile")
+        .select("id")
+        .eq("name", username)
+        .limit(1);
+
+      if (preexistingUser && preexistingUser.length > 0) {
+        setError("Der Benutzername ist bereits vergeben.");
+        setLoading(false);
+        return;
+      }
+
       const { data, error: signUpError } =
-        await supabaseComponentClient.auth.signUp({
+        await supabaseBrowserClient.auth.signUp({
           email,
           password,
         });
@@ -38,7 +62,7 @@ export default function RegisterPage() {
 
       const id = data.user?.id;
       if (id) {
-        const { error: insertError } = await supabaseComponentClient
+        const { error: insertError } = await supabaseBrowserClient
           .from("user_profile")
           .insert({
             id,
@@ -47,9 +71,7 @@ export default function RegisterPage() {
 
         if (insertError) {
           console.error(insertError);
-          setError(
-            "Registrierung erfolgreich, aber Profildaten konnten nicht gespeichert werden."
-          );
+          setError("Profildaten konnten nicht gespeichert werden.");
           return;
         }
       }
