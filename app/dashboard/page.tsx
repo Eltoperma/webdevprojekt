@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
-import { supabaseServerClient } from "@/lib/supabase/supabaseServerClient";
+import { createSupabaseServerClient } from "@/lib/supabase/supabaseServerClient";
 import DashboardForm from "./DashboardForm";
 import "server-only";
 
 export default async function DashboardPage() {
+  const supabaseServerClient = await createSupabaseServerClient();
   const {
     data: { session },
   } = await supabaseServerClient.auth.getSession();
