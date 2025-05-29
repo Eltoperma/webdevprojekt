@@ -2,48 +2,20 @@
 
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import Image from 'next/image';
 import { Operator, Difficulty } from '../types/math';
-import { calculateResult, getDifficultyDescription } from '../lib/mathTasks';
-import { getDailyGames, DailyGames, saveGameAttempt } from '../services/mathGameService';
+import { getDifficultyDescription } from '../lib/mathTasks';
+import { MathGameHandler } from '../lib/MathGameHandler';
 
 const ReactConfetti = dynamic(() => import('react-confetti'), {
   ssr: false
 });
 
-interface GameState {
-  numbers: number[];
-  operators: (Operator | null)[];
-  result: number | null;
-  attempts: number;
-  previousAttempts: Array<{
-    numbers: number[];
-    operators: (Operator | null)[];
-    result: number;
-  }>;
-  isIntegerResult: boolean;
-  difficulty: Difficulty;
-  isCorrect: boolean;
-  lives: number;
-  currentGameId: number | null;
-}
-
 export default function MathGame() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [gameState, setGameState] = useState<GameState>({
-    numbers: [],
-    operators: [null, null, null, null],
-    result: null,
-    attempts: 0,
-    previousAttempts: [],
-    isIntegerResult: true,
-    difficulty: 1,
-    isCorrect: false,
-    lives: 3,
-    currentGameId: null,
-  });
-
-  const [dailyGames, setDailyGames] = useState<DailyGames | null>(null);
+  const [gameHandler] = useState(() => new MathGameHandler());
+  const [gameState, setGameState] = useState(gameHandler.getCurrentState());
   const [showConfetti, setShowConfetti] = useState(false);
   const [windowSize, setWindowSize] = useState({
     width: typeof window !== 'undefined' ? window.innerWidth : 0,
@@ -51,24 +23,12 @@ export default function MathGame() {
   });
 
   useEffect(() => {
-    const loadGames = async () => {
+    const initializeGame = async () => {
       try {
         setIsLoading(true);
         setError(null);
-        const games = await getDailyGames();
-        
-        if (!games) {
-          setError('No games available for today');
-          return;
-        }
-
-        setDailyGames(games);
-        const currentGame = games[getDifficultyKey(gameState.difficulty)];
-        setGameState(prev => ({
-          ...prev,
-          numbers: currentGame.numbers,
-          currentGameId: currentGame.math_game_id,
-        }));
+        await gameHandler.initialize();
+        setGameState(gameHandler.getCurrentState());
       } catch (err) {
         setError('Failed to load games. Please try again later.');
       } finally {
@@ -76,18 +36,8 @@ export default function MathGame() {
       }
     };
 
-    loadGames();
+    initializeGame();
   }, []);
-
-  const getDifficultyKey = (difficulty: number): keyof DailyGames => {
-    switch (difficulty) {
-      case 1: return 'easy';
-      case 2: return 'medium';
-      case 3: return 'hard';
-      case 4: return 'expert';
-      default: return 'easy';
-    }
-  };
 
   useEffect(() => {
     const handleResize = () => {
@@ -101,101 +51,40 @@ export default function MathGame() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const isOperatorUsed = (operator: Operator): boolean => {
-    return gameState.operators.includes(operator);
-  };
-
   const handleOperatorClick = (index: number, operator: Operator) => {
-    if (isOperatorUsed(operator) || isLoading) return;
-
-    const newOperators = [...gameState.operators];
-    newOperators[index] = operator;
-    
-    setGameState(prev => ({
-      ...prev,
-      operators: newOperators,
-      result: null,
-      isCorrect: false
-    }));
+    gameHandler.handleOperatorClick(index, operator);
+    setGameState(gameHandler.getCurrentState());
   };
 
   const handleDifficultyChange = (newDifficulty: Difficulty) => {
-    if (!dailyGames || isLoading) return;
-
-    const currentGame = dailyGames[getDifficultyKey(newDifficulty)];
-    setGameState(prev => ({
-      ...prev,
-      difficulty: newDifficulty,
-      numbers: currentGame.numbers,
-      operators: [null, null, null, null],
-      result: null,
-      currentGameId: currentGame.math_game_id,
-    }));
+    gameHandler.handleDifficultyChange(newDifficulty);
+    setGameState(gameHandler.getCurrentState());
   };
 
+  const handleKeyPress = (event: KeyboardEvent) => {
+    gameHandler.handleKeyPress(event);
+    setGameState(gameHandler.getCurrentState());
+  };
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyPress);
+    return () => {
+      window.removeEventListener('keydown', handleKeyPress);
+    };
+  }, []);
+
   const confirmResult = async () => {
-    if (gameState.operators.some(op => op === null) || isLoading) return;
-    
-    const { result } = calculateResult(gameState.numbers, gameState.operators as Operator[]);
-    const isCorrect = dailyGames ? result === dailyGames[getDifficultyKey(gameState.difficulty)].result : false;
-    
-    if (gameState.currentGameId) {
-      await saveGameAttempt(
-        gameState.currentGameId,
-        gameState.numbers,
-        gameState.operators as string[],
-        result
-      );
-    }
-    
-    if (isCorrect) {
+    await gameHandler.confirmResult();
+    setGameState(gameHandler.getCurrentState());
+    if (gameState.gameState.isCorrect) {
       setShowConfetti(true);
       setTimeout(() => setShowConfetti(false), 5000);
-      
-      setGameState(prev => ({
-        ...prev,
-        result,
-        isCorrect: true,
-        isIntegerResult: Number.isInteger(result),
-      }));
-
-      setTimeout(() => {
-        if (dailyGames) {
-          const currentGame = dailyGames[getDifficultyKey(gameState.difficulty)];
-          setGameState(prev => ({
-            ...prev,
-            numbers: currentGame.numbers,
-            operators: [null, null, null, null],
-            result: null,
-            previousAttempts: [],
-            lives: 3,
-            isCorrect: false,
-            currentGameId: currentGame.math_game_id,
-          }));
-        }
-      }, 2000);
-    } else {
-      const newLives = gameState.lives - 1;
-      
-      setGameState(prev => ({
-        ...prev,
-        result,
-        isIntegerResult: Number.isInteger(result),
-        isCorrect,
-        previousAttempts: [...prev.previousAttempts, {
-          numbers: prev.numbers,
-          operators: prev.operators,
-          result,
-        }],
-        lives: newLives,
-        operators: [null, null, null, null],
-        ...(newLives <= 0 && dailyGames && {
-          operators: dailyGames[getDifficultyKey(gameState.difficulty)].operators as Operator[],
-          result: dailyGames[getDifficultyKey(gameState.difficulty)].result,
-          isCorrect: true
-        })
-      }));
     }
+  };
+
+  const handleContainerClick = () => {
+    gameHandler.handleOperatorClick(-1, '+' as Operator); // Use -1 as index and any operator to just switch modes
+    setGameState(gameHandler.getCurrentState());
   };
 
   if (isLoading) {
@@ -219,8 +108,10 @@ export default function MathGame() {
     );
   }
 
+  const { gameState: state, selectedOperatorIndex, isKeyboardMode } = gameState;
+
   return (
-    <div className="p-8 max-w-2xl mx-auto">
+    <div className="p-4 sm:p-8 max-w-2xl mx-auto" onClick={handleContainerClick}>
       {showConfetti && (
         <ReactConfetti
           width={windowSize.width}
@@ -230,200 +121,243 @@ export default function MathGame() {
         />
       )}
       
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Mathe Spiel</h1>
-      </div>
       
-      <div className="mb-6">
-        <h2 className="text-lg font-semibold mb-2">Schwierigkeitsgrad</h2>
-        <div className="flex gap-2">
+      
+      <div className="mb-4 sm:mb-6">
+        <h2 className="text-base sm:text-lg font-semibold mb-2 dark:text-white">Schwierigkeitsgrad</h2>
+        <div className="grid grid-cols-2 sm:flex sm:gap-2 gap-1">
           {[1, 2, 3, 4].map((level) => (
             <button
               key={level}
               onClick={() => handleDifficultyChange(level as Difficulty)}
               disabled={isLoading}
-              className={`px-4 py-2 rounded ${
-                gameState.difficulty === level
+              className={`px-2 sm:px-4 py-2 rounded relative min-w-0 sm:min-w-[100px] ${
+                state.difficulty === level
                   ? 'bg-blue-500 text-white'
-                  : 'bg-gray-200 hover:bg-gray-300'
+                  : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white'
               } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              Level {level}
+              <div className="flex items-center justify-center gap-1 sm:gap-2">
+                <span className="text-sm sm:text-base">Level {level}</span>
+                {state.difficultyStates[level as Difficulty].isCompleted && (
+                  state.difficultyStates[level as Difficulty].lives > 0 ? (
+                    <Image 
+                      src="/icons/check-circle.svg"
+                      alt="Completed"
+                      width={20}
+                      height={20}
+                      className="h-4 w-4 sm:h-5 sm:w-5 text-green-500 absolute -right-1 -top-1" 
+                    />
+                  ) : (
+                    <Image 
+                      src="/icons/x-circle.svg"
+                      alt="Failed"
+                      width={20}
+                      height={20}
+                      className="h-4 w-4 sm:h-5 sm:w-5 text-red-500 absolute -right-1 -top-1" 
+                    />
+                  )
+                )}
+              </div>
             </button>
           ))}
         </div>
-        <p className="mt-2 text-sm text-gray-600">
-          {getDifficultyDescription(gameState.difficulty)}
+        <p className="mt-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+          {getDifficultyDescription(state.difficulty)}
         </p>
       </div>
 
-      <div className="mb-6 p-6 bg-white rounded-lg shadow-lg">
-        <div className="flex items-center justify-center space-x-2">
-          {gameState.numbers.map((num, i) => (
-            <div key={i} className="flex items-center">
-              <span className="text-2xl font-mono">{num}</span>
-              {i < gameState.operators.length && (
-                <div className="mx-2">
-                  <button
-                    onClick={() => handleOperatorClick(i, '+')}
-                    disabled={isOperatorUsed('+') || gameState.lives <= 0 || isLoading}
-                    className={`w-8 h-8 rounded ${
-                      gameState.operators[i] === '+' 
-                        ? 'bg-blue-500 text-white' 
-                        : isOperatorUsed('+') || gameState.lives <= 0 || isLoading
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          : 'bg-gray-200 hover:bg-gray-300'
-                    }`}
-                  >
-                    +
-                  </button>
-                  <button
-                    onClick={() => handleOperatorClick(i, '-')}
-                    disabled={isOperatorUsed('-') || gameState.lives <= 0 || isLoading}
-                    className={`w-8 h-8 rounded ${
-                      gameState.operators[i] === '-' 
-                        ? 'bg-blue-500 text-white' 
-                        : isOperatorUsed('-') || gameState.lives <= 0 || isLoading
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          : 'bg-gray-200 hover:bg-gray-300'
-                    }`}
-                  >
-                    -
-                  </button>
-                  <button
-                    onClick={() => handleOperatorClick(i, '*')}
-                    disabled={isOperatorUsed('*') || gameState.lives <= 0 || isLoading}
-                    className={`w-8 h-8 rounded ${
-                      gameState.operators[i] === '*' 
-                        ? 'bg-blue-500 text-white' 
-                        : isOperatorUsed('*') || gameState.lives <= 0 || isLoading
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          : 'bg-gray-200 hover:bg-gray-300'
-                    }`}
-                  >
-                    ×
-                  </button>
-                  <button
-                    onClick={() => handleOperatorClick(i, '/')}
-                    disabled={isOperatorUsed('/') || gameState.lives <= 0 || isLoading}
-                    className={`w-8 h-8 rounded ${
-                      gameState.operators[i] === '/' 
-                        ? 'bg-blue-500 text-white' 
-                        : isOperatorUsed('/') || gameState.lives <= 0 || isLoading
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          : 'bg-gray-200 hover:bg-gray-300'
-                    }`}
-                  >
-                    ÷
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
+      <div className="mb-4 sm:mb-6 p-4 sm:p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+        <div className="flex justify-end mb-2">
           <button
-            onClick={confirmResult}
-            disabled={gameState.operators.some(op => op === null) || gameState.lives <= 0 || isLoading}
-            className={`ml-4 w-12 h-12 rounded-lg text-2xl font-bold ${
-              gameState.operators.some(op => op === null) || gameState.lives <= 0 || isLoading
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                : 'bg-blue-500 hover:bg-blue-600 text-white'
+            onClick={(e) => {
+              e.stopPropagation();
+              gameHandler.resetOperators();
+              setGameState(gameHandler.getCurrentState());
+            }}
+            disabled={!state.operators.some(op => op !== null) || state.difficultyStates[state.difficulty].lives <= 0 || isLoading || state.difficultyStates[state.difficulty].isCompleted}
+            className={`p-1.5 rounded-full ${
+              !state.operators.some(op => op !== null) || state.difficultyStates[state.difficulty].lives <= 0 || isLoading || state.difficultyStates[state.difficulty].isCompleted
+                ? 'bg-gray-200 dark:bg-gray-600 text-gray-400 dark:text-gray-300 cursor-not-allowed'
+                : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white'
             }`}
           >
-            =
+            <Image 
+              src="/icons/reset.svg"
+              alt="Reset"
+              width={20}
+              height={20}
+              className="h-4 w-4 sm:h-5 sm:w-5" 
+            />
           </button>
         </div>
+        <div className="flex items-center justify-center gap-0.5 sm:gap-2 overflow-x-auto">
+          <div className="flex items-center flex-nowrap">
+            {state.numbers.map((num, i) => (
+              <div key={i} className="flex items-center flex-nowrap">
+                <span className="text-base sm:text-2xl font-mono dark:text-white px-0.5 sm:px-1 whitespace-nowrap">{num}</span>
+                {i < state.operators.length && (
+                  <div className="mx-0.5 sm:mx-2 grid grid-cols-2 gap-0.5 sm:gap-1 flex-shrink-0 relative p-0.5 sm:p-1">
+                    {selectedOperatorIndex === i && isKeyboardMode && (
+                      <div className="absolute inset-0 border-2 border-blue-500 dark:border-blue-400 rounded-lg opacity-50" />
+                    )}
+                    <button
+                      onClick={() => handleOperatorClick(i, '+')}
+                      disabled={state.operators.includes('+') || state.difficultyStates[state.difficulty].lives <= 0 || isLoading || state.difficultyStates[state.difficulty].isCompleted}
+                      className={`w-5 h-5 sm:w-8 sm:h-8 rounded text-sm sm:text-base ${
+                        state.operators[i] === '+' 
+                          ? 'bg-blue-500 text-white' 
+                          : state.operators.includes('+') || state.difficultyStates[state.difficulty].lives <= 0 || isLoading || state.difficultyStates[state.difficulty].isCompleted
+                            ? 'bg-gray-200 dark:bg-gray-600 text-gray-400 dark:text-gray-300 cursor-not-allowed'
+                            : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white'
+                      }`}
+                    >
+                      +
+                    </button>
+                    <button
+                      onClick={() => handleOperatorClick(i, '-')}
+                      disabled={state.operators.includes('-') || state.difficultyStates[state.difficulty].lives <= 0 || isLoading || state.difficultyStates[state.difficulty].isCompleted}
+                      className={`w-5 h-5 sm:w-8 sm:h-8 rounded text-sm sm:text-base ${
+                        state.operators[i] === '-' 
+                          ? 'bg-blue-500 text-white' 
+                          : state.operators.includes('-') || state.difficultyStates[state.difficulty].lives <= 0 || isLoading || state.difficultyStates[state.difficulty].isCompleted
+                            ? 'bg-gray-200 dark:bg-gray-600 text-gray-400 dark:text-gray-300 cursor-not-allowed'
+                            : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white'
+                      }`}
+                    >
+                      -
+                    </button>
+                    <button
+                      onClick={() => handleOperatorClick(i, '*')}
+                      disabled={state.operators.includes('*') || state.difficultyStates[state.difficulty].lives <= 0 || isLoading || state.difficultyStates[state.difficulty].isCompleted}
+                      className={`w-5 h-5 sm:w-8 sm:h-8 rounded text-sm sm:text-base ${
+                        state.operators[i] === '*' 
+                          ? 'bg-blue-500 text-white' 
+                          : state.operators.includes('*') || state.difficultyStates[state.difficulty].lives <= 0 || isLoading || state.difficultyStates[state.difficulty].isCompleted
+                            ? 'bg-gray-200 dark:bg-gray-600 text-gray-400 dark:text-gray-300 cursor-not-allowed'
+                            : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white'
+                      }`}
+                    >
+                      ×
+                    </button>
+                    <button
+                      onClick={() => handleOperatorClick(i, '/')}
+                      disabled={state.operators.includes('/') || state.difficultyStates[state.difficulty].lives <= 0 || isLoading || state.difficultyStates[state.difficulty].isCompleted}
+                      className={`w-5 h-5 sm:w-8 sm:h-8 rounded text-sm sm:text-base ${
+                        state.operators[i] === '/' 
+                          ? 'bg-blue-500 text-white' 
+                          : state.operators.includes('/') || state.difficultyStates[state.difficulty].lives <= 0 || isLoading || state.difficultyStates[state.difficulty].isCompleted
+                            ? 'bg-gray-200 dark:bg-gray-600 text-gray-400 dark:text-gray-300 cursor-not-allowed'
+                            : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white'
+                      }`}
+                    >
+                      ÷
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+            <button
+              onClick={confirmResult}
+              disabled={state.operators.some(op => op === null) || state.difficultyStates[state.difficulty].lives <= 0 || isLoading || state.difficultyStates[state.difficulty].isCompleted}
+              className={`ml-0.5 sm:ml-4 w-6 h-6 sm:w-12 sm:h-12 rounded-lg text-base sm:text-2xl font-bold flex-shrink-0 ${
+                state.operators.some(op => op === null) || state.difficultyStates[state.difficulty].lives <= 0 || isLoading || state.difficultyStates[state.difficulty].isCompleted
+                  ? 'bg-gray-200 dark:bg-gray-600 text-gray-400 dark:text-gray-300 cursor-not-allowed'
+                  : 'bg-blue-500 hover:bg-blue-600 text-white'
+              }`}
+            >
+              =
+            </button>
+          </div>
+        </div>
+
+        {(state.difficulty === 1 || state.difficulty === 2) && state.operators.some(op => op !== null) && (
+          <div className="mt-2 text-center">
+            <div className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
+              Zwischenergebnis: {gameHandler.calculateIntermediateResult(state.numbers, state.operators)}
+            </div>
+          </div>
+        )}
 
         <div className="mt-4 flex justify-center items-center gap-2">
-          <span className="text-sm font-semibold">Leben:</span>
+          <span className="text-xs sm:text-sm font-semibold dark:text-white">Leben:</span>
           {[...Array(3)].map((_, i) => (
-            <svg
+            <Image
               key={i}
-              xmlns="http://www.w3.org/2000/svg"
-              className={`h-6 w-6 ${i < gameState.lives ? 'text-red-500' : 'text-gray-300'}`}
-              viewBox="0 0 20 20"
-              fill="currentColor"
-            >
-              <path
-                fillRule="evenodd"
-                d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"
-                clipRule="evenodd"
-              />
-            </svg>
+              src={i < state.difficultyStates[state.difficulty].lives ? "/icons/heart.svg" : "/icons/heart-gray.svg"}
+              alt="Life"
+              width={24}
+              height={24}
+              className="h-5 w-5 sm:h-6 sm:w-6"
+            />
           ))}
         </div>
 
-        {gameState.result !== null && (
+        {state.result !== null && (
           <div className="mt-4 text-center">
-            {gameState.lives <= 0 ? (
-              <div className="p-4 bg-gray-100 rounded-lg">
-                <h2 className="text-lg font-semibold mb-2">Lösung:</h2>
+            {state.difficultyStates[state.difficulty].lives <= 0 ? (
+              <div className="p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                <h2 className="text-lg font-semibold mb-2 dark:text-white">Lösung:</h2>
                 <div className="flex items-center justify-center space-x-2">
-                  {gameState.numbers.map((num, i) => (
+                  {state.numbers.map((num, i) => (
                     <div key={i} className="flex items-center">
-                      <span className="text-xl font-mono">{num}</span>
-                      {i < gameState.operators.length && (
-                        <span className="mx-2 text-xl">{gameState.operators[i]}</span>
+                      <span className="text-xl font-mono dark:text-white">{num}</span>
+                      {i < state.operators.length && (
+                        <span className="mx-2 text-xl dark:text-white">{state.operators[i]}</span>
                       )}
                     </div>
                   ))}
-                  <span className="ml-4 text-xl font-bold">= {gameState.result}</span>
+                  <span className="ml-4 text-xl font-bold dark:text-white">= {state.result}</span>
                 </div>
               </div>
             ) : (
               <div className={`text-xl font-bold p-4 rounded-lg transition-colors duration-300 ${
-                gameState.isCorrect 
-                  ? 'bg-green-100 text-green-700' 
-                  : !gameState.isIntegerResult 
-                    ? 'text-red-500' 
-                    : ''
+                state.isCorrect 
+                  ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300' 
+                  : !state.isIntegerResult 
+                    ? 'text-red-500 dark:text-red-400' 
+                    : 'dark:text-white'
               }`}>
-                {gameState.isCorrect ? (
+                {state.isCorrect ? (
                   <div className="flex flex-col items-center">
                     <div className="flex items-center mb-2">
-                      <svg 
-                        xmlns="http://www.w3.org/2000/svg" 
+                      <Image 
+                        src="/icons/check-circle.svg"
+                        alt="Correct"
+                        width={24}
+                        height={24}
                         className="h-6 w-6 mr-2" 
-                        viewBox="0 0 20 20" 
-                        fill="currentColor"
-                      >
-                        <path 
-                          fillRule="evenodd" 
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" 
-                          clipRule="evenodd" 
-                        />
-                      </svg>
+                      />
                       <span>Richtig!</span>
                     </div>
                     <div className="flex items-center justify-center space-x-2 text-lg">
-                      {gameState.numbers.map((num, i) => (
+                      {state.numbers.map((num, i) => (
                         <div key={i} className="flex items-center">
                           <span className="font-mono">{num}</span>
-                          {i < gameState.operators.length && (
-                            <span className="mx-2">{gameState.operators[i]}</span>
+                          {i < state.operators.length && (
+                            <span className="mx-2">{state.operators[i]}</span>
                           )}
                         </div>
                       ))}
-                      <span className="ml-2">= {gameState.result}</span>
+                      <span className="ml-2">= {state.result}</span>
+                    </div>
+                    <div className="mt-4 text-lg font-mono">
+                      Final Score: {state.difficultyStates[state.difficulty].score}
                     </div>
                   </div>
                 ) : (
                   <>
-                    Ergebnis: {gameState.result}
-                    {!gameState.isIntegerResult && (
-                      <span className="ml-2 inline-flex items-center">
-                        <svg 
-                          xmlns="http://www.w3.org/2000/svg" 
-                          className="h-5 w-5" 
-                          viewBox="0 0 20 20" 
-                          fill="currentColor"
-                        >
-                          <path 
-                            fillRule="evenodd" 
-                            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" 
-                            clipRule="evenodd" 
-                          />
-                        </svg>
-                        <span className="ml-1 text-sm">Das Ergebnis muss eine ganze Zahl sein!</span>
+                    Ergebnis: {state.result}
+                    {!state.isIntegerResult && (
+                      <span className="ml-2 inline-flex items-center text-sm sm:text-base">
+                        <Image 
+                          src="/icons/info-circle.svg"
+                          alt="Info"
+                          width={20}
+                          height={20}
+                          className="h-4 w-4 sm:h-5 sm:w-5" 
+                        />
+                        <span className="ml-1">Das Ergebnis muss eine ganze Zahl sein!</span>
                       </span>
                     )}
                   </>
@@ -432,23 +366,25 @@ export default function MathGame() {
             )}
           </div>
         )}
-      </div>
 
-      {[...gameState.previousAttempts].reverse().map((attempt, index) => (
-        <div key={index} className="mb-4 p-4 bg-gray-100 rounded-lg opacity-50">
-          <div className="flex items-center justify-center space-x-2">
-            {attempt.numbers.map((num, i) => (
-              <div key={i} className="flex items-center">
-                <span className="text-xl font-mono">{num}</span>
-                {i < attempt.operators.length && (
-                  <span className="mx-2 text-xl">{attempt.operators[i]}</span>
-                )}
+        {[...state.difficultyStates[state.difficulty].previousAttempts]
+          .reverse()
+          .map((attempt, index) => (
+            <div key={index} className="mt-2 p-2 sm:p-4 bg-gray-100 dark:bg-gray-700 rounded-lg opacity-50">
+              <div className="flex items-center justify-center space-x-1 sm:space-x-2 text-base sm:text-lg">
+                {attempt.numbers.map((num, i) => (
+                  <div key={i} className="flex items-center">
+                    <span className="font-mono dark:text-white">{num}</span>
+                    {i < attempt.operators.length && (
+                      <span className="mx-1 sm:mx-2 dark:text-white">{attempt.operators[i]}</span>
+                    )}
+                  </div>
+                ))}
+                <span className="ml-2 dark:text-white">= {attempt.result}</span>
               </div>
-            ))}
-            <span className="ml-4">= {attempt.result}</span>
-          </div>
-        </div>
-      ))}
+            </div>
+          ))}
+      </div>
     </div>
   );
-} 
+}
