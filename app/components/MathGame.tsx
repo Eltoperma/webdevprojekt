@@ -145,12 +145,12 @@ export default function MathGame() {
       )}
       
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Mathe Spiel</h1>
+        <h1 className="text-2xl font-bold dark:text-white">Mathe Spiel</h1>
       </div>
       
       {/* Difficulty Selection */}
       <div className="mb-6">
-        <h2 className="text-lg font-semibold mb-2">Schwierigkeitsgrad</h2>
+        <h2 className="text-lg font-semibold mb-2 dark:text-white">Schwierigkeitsgrad</h2>
         <div className="flex gap-2">
           {[1, 2, 3, 4].map((level) => (
             <button
@@ -159,24 +159,24 @@ export default function MathGame() {
               className={`px-4 py-2 rounded ${
                 gameState.difficulty === level
                   ? 'bg-blue-500 text-white'
-                  : 'bg-gray-200 hover:bg-gray-300'
+                  : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white'
               }`}
             >
               Level {level}
             </button>
           ))}
         </div>
-        <p className="mt-2 text-sm text-gray-600">
+        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
           {getDifficultyDescription(gameState.difficulty)}
         </p>
       </div>
 
       {/* Current game state */}
-      <div className="mb-6 p-6 bg-white rounded-lg shadow-lg">
+      <div className="mb-6 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
         <div className="flex items-center justify-center space-x-2">
           {gameState.numbers.map((num, i) => (
             <div key={i} className="flex items-center">
-              <span className="text-2xl font-mono">{num}</span>
+              <span className="text-2xl font-mono dark:text-white">{num}</span>
               {i < gameState.operators.length && (
                 <div className="mx-2">
                   <button
@@ -186,8 +186,8 @@ export default function MathGame() {
                       gameState.operators[i] === '+' 
                         ? 'bg-blue-500 text-white' 
                         : isOperatorUsed('+') || gameState.lives <= 0
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          : 'bg-gray-200 hover:bg-gray-300'
+                          ? 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed'
+                          : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white'
                     }`}
                   >
                     +
@@ -199,8 +199,8 @@ export default function MathGame() {
                       gameState.operators[i] === '-' 
                         ? 'bg-blue-500 text-white' 
                         : isOperatorUsed('-') || gameState.lives <= 0
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          : 'bg-gray-200 hover:bg-gray-300'
+                          ? 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed'
+                          : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white'
                     }`}
                   >
                     -
@@ -212,8 +212,8 @@ export default function MathGame() {
                       gameState.operators[i] === '*' 
                         ? 'bg-blue-500 text-white' 
                         : isOperatorUsed('*') || gameState.lives <= 0
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          : 'bg-gray-200 hover:bg-gray-300'
+                          ? 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed'
+                          : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white'
                     }`}
                   >
                     ×
@@ -225,8 +225,8 @@ export default function MathGame() {
                       gameState.operators[i] === '/' 
                         ? 'bg-blue-500 text-white' 
                         : isOperatorUsed('/') || gameState.lives <= 0
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          : 'bg-gray-200 hover:bg-gray-300'
+                          ? 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed'
+                          : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white'
                     }`}
                   >
                     ÷
@@ -240,7 +240,7 @@ export default function MathGame() {
             disabled={gameState.operators.some(op => op === null) || gameState.lives <= 0}
             className={`ml-4 w-12 h-12 rounded-lg text-2xl font-bold ${
               gameState.operators.some(op => op === null) || gameState.lives <= 0
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                ? 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed'
                 : 'bg-blue-500 hover:bg-blue-600 text-white'
             }`}
           >
@@ -250,12 +250,12 @@ export default function MathGame() {
 
         {/* Lives display */}
         <div className="mt-4 flex justify-center items-center gap-2">
-          <span className="text-sm font-semibold">Leben:</span>
+          <span className="text-sm font-semibold dark:text-white">Leben:</span>
           {[...Array(3)].map((_, i) => (
             <svg
               key={i}
               xmlns="http://www.w3.org/2000/svg"
-              className={`h-6 w-6 ${i < gameState.lives ? 'text-red-500' : 'text-gray-300'}`}
+              className={`h-6 w-6 ${i < gameState.lives ? 'text-red-500' : 'text-gray-300 dark:text-gray-600'}`}
               viewBox="0 0 20 20"
               fill="currentColor"
             >
@@ -271,26 +271,26 @@ export default function MathGame() {
         {gameState.result !== null && (
           <div className="mt-4 text-center">
             {gameState.lives <= 0 ? (
-              <div className="p-4 bg-gray-100 rounded-lg">
-                <h2 className="text-lg font-semibold mb-2">Lösung:</h2>
+              <div className="p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                <h2 className="text-lg font-semibold mb-2 dark:text-white">Lösung:</h2>
                 <div className="flex items-center justify-center space-x-2">
                   {gameState.numbers.map((num, i) => (
                     <div key={i} className="flex items-center">
-                      <span className="text-xl font-mono">{num}</span>
+                      <span className="text-xl font-mono dark:text-white">{num}</span>
                       {i < solutions[0].operators.length && (
-                        <span className="mx-2 text-xl">{solutions[0].operators[i]}</span>
+                        <span className="mx-2 text-xl dark:text-white">{solutions[0].operators[i]}</span>
                       )}
                     </div>
                   ))}
-                  <span className="ml-4 text-xl font-bold">= {solutions[0].result}</span>
+                  <span className="ml-4 text-xl font-bold dark:text-white">= {solutions[0].result}</span>
                 </div>
               </div>
             ) : (
               <div className={`text-xl font-bold p-4 rounded-lg transition-colors duration-300 ${
                 gameState.isCorrect 
-                  ? 'bg-green-100 text-green-700' 
+                  ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' 
                   : !gameState.isIntegerResult 
-                    ? 'text-red-500' 
+                    ? 'text-red-500 dark:text-red-400' 
                     : ''
               }`}>
                 Ergebnis: {gameState.result}
@@ -308,11 +308,11 @@ export default function MathGame() {
                         clipRule="evenodd" 
                       />
                     </svg>
-                    <span className="ml-1 text-sm">Das Ergebnis muss eine ganze Zahl sein!</span>
+                    <span className="ml-1 text-sm dark:text-white">Das Ergebnis muss eine ganze Zahl sein!</span>
                   </span>
                 )}
                 {gameState.isCorrect && (
-                  <span className="ml-2 inline-flex items-center text-green-700">
+                  <span className="ml-2 inline-flex items-center text-green-700 dark:text-green-300">
                     <svg 
                       xmlns="http://www.w3.org/2000/svg" 
                       className="h-5 w-5" 
@@ -336,17 +336,17 @@ export default function MathGame() {
 
       {/* Previous attempts */}
       {[...gameState.previousAttempts].reverse().map((attempt, index) => (
-        <div key={index} className="mb-4 p-4 bg-gray-100 rounded-lg opacity-50">
+        <div key={index} className="mb-4 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg opacity-50">
           <div className="flex items-center justify-center space-x-2">
             {attempt.numbers.map((num, i) => (
               <div key={i} className="flex items-center">
-                <span className="text-xl font-mono">{num}</span>
+                <span className="text-xl font-mono dark:text-white">{num}</span>
                 {i < attempt.operators.length && (
-                  <span className="mx-2 text-xl">{attempt.operators[i]}</span>
+                  <span className="mx-2 text-xl dark:text-white">{attempt.operators[i]}</span>
                 )}
               </div>
             ))}
-            <span className="ml-4">= {attempt.result}</span>
+            <span className="ml-4 dark:text-white">= {attempt.result}</span>
           </div>
         </div>
       ))}
