@@ -1,10 +1,9 @@
 import { Operator, Difficulty } from "../types/math";
-import { calculateResult } from "./mathTasks";
 import {
   getDailyGames,
   DailyGames,
   saveGameAttempt,
-} from "../services/mathGameService";
+} from "../../../server/services/mathGameService";
 
 interface DifficultyState {
   lives: number;
@@ -167,6 +166,32 @@ export class MathGameHandler {
     localStorage.setItem(this.STORAGE_KEY, JSON.stringify(stateToSave));
 
     return defaultState;
+  }
+  public calculateResult(
+    numbers: number[],
+    operators: Operator[]
+  ): { result: number; isInteger: boolean } {
+    let result = numbers[0];
+    for (let i = 0; i < operators.length; i++) {
+      const operator = operators[i];
+      const nextNumber = numbers[i + 1];
+
+      switch (operator) {
+        case "+":
+          result += nextNumber;
+          break;
+        case "-":
+          result -= nextNumber;
+          break;
+        case "*":
+          result *= nextNumber;
+          break;
+        case "/":
+          result = result / nextNumber;
+          break;
+      }
+    }
+    return { result, isInteger: Number.isInteger(result) };
   }
 
   public async initialize(): Promise<void> {
@@ -354,7 +379,7 @@ export class MathGameHandler {
   public async confirmResult(): Promise<void> {
     if (this.gameState.operators.some((op) => op === null)) return;
 
-    const { result } = calculateResult(
+    const { result } = this.calculateResult(
       this.gameState.numbers,
       this.gameState.operators as Operator[]
     );

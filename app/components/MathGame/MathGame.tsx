@@ -4,13 +4,26 @@ import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import { Operator, Difficulty } from '../types/math';
-import { getDifficultyDescription } from '../lib/mathTasks';
-import { MathGameHandler } from '../lib/MathGameHandler';
+import { MathGameHandler } from '../MathGame/MathGameHandler';
 
 const ReactConfetti = dynamic(() => import('react-confetti'), {
   ssr: false
 });
 
+function getDifficultyDescription(difficulty: Difficulty): string {
+  switch (difficulty) {
+    case 1:
+      return "Level 1: Nur positive einstellige Zahlen (1-9)";
+    case 2:
+      return "Level 2: Positive ein- und zweistellige Zahlen (1-99)";
+    case 3:
+      return "Level 3: Positive und negative ein- und zweistellige Zahlen (-99 bis 99)";
+    case 4:
+      return "Level 4: Positive und negative ein- und zweistellige Zahlen (-99 bis 99)";
+    default:
+      return "Unbekannter Schwierigkeitsgrad";
+  }
+}
 export default function MathGame() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

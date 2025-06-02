@@ -1,5 +1,5 @@
-import { supabaseAdmin } from "@/lib/supabase/supabaseAdmin";
-import { supabase } from "@/lib/supabase/supabase";
+import { supabaseAdmin } from "@/app/lib/supabase/supabaseAdmin";
+import { supabase } from "@/app/lib/supabase/supabase";
 import "server-only";
 
 export class UserService {
