@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { supabaseBrowserClient } from "@/lib/supabase/supabaseComponentClient"; // ggf. Pfad anpassen
+import { supabaseBrowserClient } from "@/lib/supabase/supabaseComponentClient";
 
 type Game = {
   name: string;
@@ -104,7 +104,7 @@ export default function LandingPageContent({
         </div>
       </main>
 
-      <footer className="mt-10 flex gap-6 flex-wrap items-center justify-center text-base text-white/80">
+      <footer className="mt-10 flex gap-6 flex-wrap items-center justify-center text-base text-black/80">
         <Link
           className="hover:underline hover:underline-offset-4"
           href="/impressum"
