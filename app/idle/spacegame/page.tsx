@@ -2,6 +2,8 @@
 import { createSupabaseServerClient } from "@/lib/supabase/supabaseServerClient";
 import ClientGame from "./ClientGame";
 import { redirect } from "next/navigation";
+import "server-only";
+import { loadWorld } from "./world";
 
 export default async function SpaceGamePage() {
   const supabaseServerClient = await createSupabaseServerClient();
@@ -13,5 +15,7 @@ export default async function SpaceGamePage() {
     redirect("/login");
   }
 
-  return <ClientGame userId={session.user.id} />;
+  const { world, game } = await loadWorld(session.user.id);
+
+  return <ClientGame userId={session.user.id} world={world} game={game} />;
 }

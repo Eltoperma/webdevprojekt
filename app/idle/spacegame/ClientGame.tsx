@@ -1,24 +1,20 @@
+// app/idle/spacegame/ClientGame.tsx
 "use client";
 
-import { useEffect, useState } from "react";
 import GalaxyMap from "@/app/components/idlespacegame/GalaxyMap";
-import { loadWorld } from "./world";
+import type { GalaxyEntity } from "@/lib/galaxy/galaxyTypes";
+import type { IdleGame } from "@/lib/galaxy/idleGameTypes";
 
-export default function ClientGame({ userId }: { userId: string }) {
-  const [world, setWorld] = useState([]);
-  const [game, setGame] = useState(null);
+type Props = {
+  userId: string;
+  world: GalaxyEntity[];
+  game: IdleGame;
+};
 
-  useEffect(() => {
-    (async () => {
-      const { world, game } = await loadWorld(userId);
-      setWorld(world);
-      setGame(game);
-    })();
-  }, [userId]);
-
+export default function ClientGame({ userId, world, game }: Props) {
   return (
     <div className="p-4">
-      {world.length > 0 && game && <GalaxyMap entities={world} player={game} />}
+      <GalaxyMap entities={world} player={game} />
     </div>
   );
 }
