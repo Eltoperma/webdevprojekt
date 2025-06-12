@@ -15,7 +15,22 @@ export default async function SpaceGamePage() {
     redirect("/login");
   }
 
+  const { data: resources, error: resourceError } = await supabaseServerClient
+    .from("idle_space_game_resources")
+    .select("*");
+
+  if (resourceError || !resources) {
+    throw new Error("❌ Ressourcen konnten nicht geladen werden.");
+  }
+
   const { world, game } = await loadWorld(session.user.id);
 
-  return <ClientGame userId={session.user.id} world={world} game={game} />;
+  return (
+    <ClientGame
+      userId={session.user.id}
+      world={world}
+      game={game}
+      resources={resources}
+    />
+  );
 }

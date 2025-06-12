@@ -1,13 +1,15 @@
 import seedrandom from "seedrandom";
 import { Resource, GalaxyEntity } from "./galaxyTypes";
 
-export function generateGalaxy(
+export function generateChunkEntities(
   seed: string,
-  allResources: Resource[]
+  allResources: Resource[],
+  count = 20,
+  chunkSize = { width: 1100, height: 700 },
+  chunkOffset = { x: 0, y: 0 }
 ): GalaxyEntity[] {
   const rng = seedrandom(seed);
 
-  // Gewichtung je Rarität
   const rarityWeights: Record<Resource["rarity"], number> = {
     Common: 50,
     Uncommon: 30,
@@ -16,7 +18,6 @@ export function generateGalaxy(
     Legendary: 2,
   };
 
-  // Hilfsfunktion: Ressource nach Gewicht picken
   function pickWeightedResource(): Resource {
     const pool = allResources.flatMap((res) =>
       Array(rarityWeights[res.rarity]).fill(res)
@@ -25,18 +26,17 @@ export function generateGalaxy(
     return pool[idx];
   }
 
-  // Entity-Generierung
-  const planets: GalaxyEntity[] = Array.from({ length: 100 }, (_, i) => {
-    const isTrader = rng() < 0.25; // 25% Chance auf Trader
+  const entities: GalaxyEntity[] = Array.from({ length: count }, (_, i) => {
+    const isTrader = rng() < 0.25;
 
     return {
       id: i,
-      x: Math.floor(rng() * 1000),
-      y: Math.floor(rng() * 600),
+      x: Math.floor(rng() * chunkSize.width) + chunkOffset.x,
+      y: Math.floor(rng() * chunkSize.height) + chunkOffset.y,
       type: isTrader ? "trader" : "planet",
       resource: pickWeightedResource(),
     };
   });
 
-  return planets;
+  return entities;
 }

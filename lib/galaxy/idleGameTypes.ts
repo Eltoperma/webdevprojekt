@@ -6,4 +6,8 @@ export type IdleGame = {
   position_y: number;
   created_at: string; // ISO-Date
   updated_at: string; // ISO-Date
+  current_pos: {
+    x: number; // Aktuelle X-Position des Spielers
+    y: number; // Aktuelle Y-Position des Spielers
+  };
 };
