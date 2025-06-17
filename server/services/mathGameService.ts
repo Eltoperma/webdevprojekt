@@ -84,3 +84,24 @@ export async function getDailyGames(): Promise<DailyGames | null> {
     return null;
   }
 }
+
+export async function saveHighscore(
+  mathGameHistoryId: number,
+  difficulty: string,
+  userId: string,
+  score: number
+): Promise<{ error: any }> {
+  try {
+    const { error } = await supabase.from("math_game_highscore").insert({
+      math_game_history_id: mathGameHistoryId,
+      difficulty,
+      user_id: userId,
+      score,
+    });
+
+    return { error };
+  } catch (error) {
+    console.error("Error saving highscore:", error);
+    return { error };
+  }
+}

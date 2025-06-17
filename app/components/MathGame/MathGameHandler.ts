@@ -2,7 +2,9 @@ import { Operator, Difficulty } from "../types/math";
 import {
   getDailyGames,
   DailyGames,
+  saveHighscore,
 } from "../../../server/services/mathGameService";
+import { supabaseBrowserClient } from "../../lib/supabase/supabaseComponentClient";
 
 interface DifficultyState {
   lives: number;
@@ -45,9 +47,11 @@ export class MathGameHandler {
   private selectedOperatorIndex: number = 0;
   private isKeyboardMode: boolean = false;
   private readonly STORAGE_KEY = "mathGameState";
+  private userId: string | null = null;
 
-  constructor() {
+  constructor(userId: string | null = null) {
     this.gameState = this.getDefaultState();
+    this.userId = userId;
   }
 
   private getDefaultState(): GameState {
@@ -361,6 +365,27 @@ export class MathGameHandler {
     this.saveState();
   }
 
+  private async saveHighscore(
+    difficulty: Difficulty,
+    score: number
+  ): Promise<void> {
+    if (!this.userId || !this.dailyGames) return;
+
+    const difficultyKey = this.getDifficultyKey(difficulty);
+    const gameHistoryId = this.dailyGames[difficultyKey].math_game_id;
+
+    const { error } = await saveHighscore(
+      gameHistoryId,
+      difficultyKey,
+      this.userId,
+      score
+    );
+
+    if (error) {
+      console.error("Failed to save highscore:", error);
+    }
+  }
+
   public async confirmResult(): Promise<void> {
     if (this.gameState.operators.some((op) => op === null)) return;
 
@@ -380,6 +405,11 @@ export class MathGameHandler {
       const timeSinceLastUpdate = now - currentState.lastUpdate;
       const additionalScore = Math.floor(timeSinceLastUpdate / 1000);
       const finalScore = currentState.score + additionalScore;
+
+      // Save highscore if user is logged in
+      if (this.userId) {
+        await this.saveHighscore(this.gameState.difficulty, finalScore);
+      }
 
       const updatedDifficultyStates = {
         ...this.gameState.difficultyStates,
