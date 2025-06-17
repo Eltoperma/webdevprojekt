@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabaseBrowserClient } from "@/lib/supabase/supabaseComponentClient";
+import { supabaseBrowserClient } from "@/app/lib/supabase/supabaseComponentClient";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -55,8 +55,8 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded shadow-md w-full max-w-md">
+    <main className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+      <div className="bg-white p-8 rounded shadow-md w-full max-w-md dark:bg-gray-800 dark:text-white">
         <h1 className="text-2xl font-bold mb-4">Login</h1>
 
         <input
@@ -84,6 +84,15 @@ export default function LoginPage() {
         </button>
 
         {error && <p className="text-red-500 mt-2 text-sm">{error}</p>}
+
+        <div className="mt-4 text-center text-gray-600 bg-gray-50 dark:bg-gray-800">
+          <p className="text-sm">
+            Noch kein Konto?{" "}
+            <a href="/register" className="text-blue-600 hover:underline">
+              Registrieren
+            </a>
+          </p>
+        </div>
       </div>
     </main>
   );

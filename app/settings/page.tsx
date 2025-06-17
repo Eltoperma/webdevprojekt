@@ -1,4 +1,4 @@
-import { createSupabaseServerClient } from "@/lib/supabase/supabaseServerClient";
+import { createSupabaseServerClient } from "@/app/lib/supabase/supabaseServerClient";
 import { redirect } from "next/navigation";
 import SettingsForm from "./SettingsForm";
 import "server-only";
