@@ -6,6 +6,18 @@ import Image from 'next/image';
 import { Operator, Difficulty } from '../types/math';
 import { MathGameHandler } from '../MathGame/MathGameHandler';
 
+interface UserProfile {
+  id: string;
+  username: string;
+  email: string;
+  created_at: string;
+  // Add other fields as needed
+}
+
+interface MathGameProps {
+  user: UserProfile | null;
+}
+
 const ReactConfetti = dynamic(() => import('react-confetti'), {
   ssr: false
 });
@@ -24,10 +36,10 @@ function getDifficultyDescription(difficulty: Difficulty): string {
       return "Unbekannter Schwierigkeitsgrad";
   }
 }
-export default function MathGame() {
+export default function MathGame({ user }: MathGameProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [gameHandler] = useState(() => new MathGameHandler());
+  const [gameHandler] = useState(() => new MathGameHandler(user?.id || null));
   const [gameState, setGameState] = useState(gameHandler.getCurrentState());
   const [showConfetti, setShowConfetti] = useState(false);
   const [windowSize, setWindowSize] = useState({
