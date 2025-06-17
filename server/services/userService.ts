@@ -1,6 +1,6 @@
-import { supabaseAdmin } from "@/lib/supabase/supabaseAdmin";
-import { supabase } from "@/lib/supabase/supabase";
-import { createSupabaseServerClient } from "@/lib/supabase/supabaseServerClient";
+import { supabaseAdmin } from "@/app/lib/supabase/supabaseAdmin";
+import { supabase } from "@/app/lib/supabase/supabase";
+import { createSupabaseServerClient } from "@/app/lib/supabase/supabaseServerClient";
 
 import "server-only";
 
