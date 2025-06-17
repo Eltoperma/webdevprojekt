@@ -2,7 +2,7 @@
 
 ## How to start:
 
-You need to have node.js and and a package manager, in our case NPM
+You need to have node.js and and a package manager, in our case NPM, installed
 
 In the root directory run following commands:
 
