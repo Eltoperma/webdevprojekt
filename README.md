@@ -10,3 +10,6 @@ In the root directory of the project folder run following commands:
 - 2: npm run dev
 
 The the local environment is available at localhost:3000
+
+Due to an external database connection the functionallity is very limited without the correct .env file
+
