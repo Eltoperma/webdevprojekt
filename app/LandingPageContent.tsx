@@ -43,7 +43,7 @@ export default function LandingPageContent({
     <div className="flex flex-col min-h-screen w-full px-6 py-10 sm:px-12 sm:py-16 font-[family-name:var(--font-geist-sans)]">
       <main className="flex flex-col gap-12 flex-1 items-center w-full max-w-6xl mx-auto">
         <Image
-          className="dark:invert w-48 sm:w-60"
+          className="w-48 sm:w-60"
           src="/logo.png"
           alt="GameHub Logo"
           width={240}
@@ -97,14 +97,14 @@ export default function LandingPageContent({
           </Link>
           <Link
             href="/faq"
-            className="rounded-full border border-solid border-white/[.15] transition-colors flex items-center justify-center hover:bg-white/[.05] font-medium text-base sm:text-lg h-12 sm:h-14 px-6 sm:px-7 w-full sm:w-auto md:w-[180px]"
+            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-white text-black gap-2 hover:bg-gray-300 font-medium text-base sm:text-lg h-12 sm:h-14 px-6 sm:px-7 sm:w-auto"
           >
             Häufige Fragen
           </Link>
         </div>
       </main>
 
-      <footer className="mt-10 flex gap-6 flex-wrap items-center justify-center text-base text-black/80">
+      <footer className="mt-10 flex gap-6 flex-wrap items-center justify-center text-base text-black/80 dark:text-white/80">
         <Link
           className="hover:underline hover:underline-offset-4"
           href="/impressum"

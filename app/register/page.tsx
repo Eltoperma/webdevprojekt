@@ -85,10 +85,9 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded shadow-md w-full max-w-md">
+    <main className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+      <div className="bg-white p-8 rounded shadow-md w-full max-w-md dark:bg-gray-800 dark:text-white">
         <h1 className="text-2xl font-bold mb-4">Registrieren</h1>
-
         <input
           type="text"
           placeholder="Username"

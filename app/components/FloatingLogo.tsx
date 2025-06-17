@@ -8,10 +8,10 @@ export default function FloatingLogo() {
       className="fixed top-4 left-4 z-50 opacity-50 hover:opacity-80 transition-opacity"
     >
       <Image
-        src="/logo.png" // Ersetze mit deinem Pfad (z. B. /logo.png)
+        src="/logo.png"
         alt="Zurück zur Startseite"
-        width={48}
-        height={48}
+        width={60}
+        height={60}
         priority
       />
     </Link>
