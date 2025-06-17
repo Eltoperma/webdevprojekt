@@ -1,5 +1,5 @@
 // app/page.tsx (Server Component)
-import { createSupabaseServerClient } from "@/lib/supabase/supabaseServerClient";
+import { createSupabaseServerClient } from "@/app/lib/supabase/supabaseServerClient";
 import LandingPageContent from "./LandingPageContent";
 import "server-only";
 

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createSupabaseServerClient } from "@/lib/supabase/supabaseServerClient";
+import { createSupabaseServerClient } from "@/app/lib/supabase/supabaseServerClient";
 import DashboardForm from "./DashboardForm";
 import "server-only";
 
