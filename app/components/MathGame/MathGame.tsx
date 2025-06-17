@@ -64,6 +64,12 @@ export default function MathGame() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  useEffect(() => {
+    // Load saved state from client localStorage after mount
+    gameHandler.loadSavedStateFromClient();
+    setGameState(gameHandler.getCurrentState());
+  }, []);
+
   const handleOperatorClick = (index: number, operator: Operator) => {
     gameHandler.handleOperatorClick(index, operator);
     setGameState(gameHandler.getCurrentState());

@@ -2,7 +2,6 @@ import { Operator, Difficulty } from "../types/math";
 import {
   getDailyGames,
   DailyGames,
-  saveGameAttempt,
 } from "../../../server/services/mathGameService";
 
 interface DifficultyState {
@@ -48,76 +47,12 @@ export class MathGameHandler {
   private readonly STORAGE_KEY = "mathGameState";
 
   constructor() {
-    this.gameState = this.loadSavedState();
+    this.gameState = this.getDefaultState();
   }
 
-  private loadSavedState(): GameState {
-    if (typeof window !== "undefined") {
-      const savedState = localStorage.getItem(this.STORAGE_KEY);
-      if (savedState) {
-        try {
-          const parsedState = JSON.parse(savedState) as SavedGameState;
-          const savedDate = new Date(parsedState.savedDate);
-          const currentDate = new Date();
-
-          const isToday =
-            savedDate.getDate() === currentDate.getDate() &&
-            savedDate.getMonth() === currentDate.getMonth() &&
-            savedDate.getFullYear() === currentDate.getFullYear();
-
-          if (isToday) {
-            const now = Date.now();
-            const updatedDifficultyStates = { ...parsedState.difficultyStates };
-
-            Object.keys(updatedDifficultyStates).forEach((difficulty) => {
-              const state =
-                updatedDifficultyStates[difficulty as unknown as Difficulty];
-              if (!state.isCompleted && state.lives > 0) {
-                const timeSinceLastUpdate = now - state.lastUpdate;
-                const additionalScore = Math.floor(timeSinceLastUpdate / 1000);
-                state.score += additionalScore;
-                state.lastUpdate = now;
-              }
-            });
-
-            const stateToSave: SavedGameState = {
-              difficultyStates: updatedDifficultyStates,
-              difficulty: parsedState.difficulty,
-              savedDate: new Date().toISOString(),
-            };
-            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(stateToSave));
-
-            const currentDifficultyState =
-              updatedDifficultyStates[parsedState.difficulty];
-            return {
-              numbers: [],
-              operators: currentDifficultyState.isCompleted
-                ? currentDifficultyState.finalResult?.operators || [
-                    null,
-                    null,
-                    null,
-                    null,
-                  ]
-                : [null, null, null, null],
-              result: currentDifficultyState.isCompleted
-                ? currentDifficultyState.finalResult?.result || null
-                : null,
-              isCorrect: currentDifficultyState.isCompleted,
-              currentGameId: null,
-              difficulty: parsedState.difficulty,
-              attempts: 0,
-              isIntegerResult: true,
-              difficultyStates: updatedDifficultyStates,
-            };
-          }
-        } catch (e) {
-          console.error("Failed to parse saved game state:", e);
-        }
-      }
-    }
-
+  private getDefaultState(): GameState {
     const now = Date.now();
-    const defaultState: GameState = {
+    return {
       numbers: [],
       operators: [null, null, null, null],
       result: null,
@@ -157,16 +92,66 @@ export class MathGameHandler {
         },
       },
     };
-
-    const stateToSave: SavedGameState = {
-      difficultyStates: defaultState.difficultyStates,
-      difficulty: defaultState.difficulty,
-      savedDate: new Date().toISOString(),
-    };
-    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(stateToSave));
-
-    return defaultState;
   }
+
+  public loadSavedStateFromClient(): void {
+    if (typeof window !== "undefined") {
+      const savedState = localStorage.getItem(this.STORAGE_KEY);
+      if (savedState) {
+        try {
+          const parsedState = JSON.parse(savedState) as SavedGameState;
+          const savedDate = new Date(parsedState.savedDate);
+          const currentDate = new Date();
+          const isToday =
+            savedDate.getDate() === currentDate.getDate() &&
+            savedDate.getMonth() === currentDate.getMonth() &&
+            savedDate.getFullYear() === currentDate.getFullYear();
+          if (isToday) {
+            const now = Date.now();
+            const updatedDifficultyStates = { ...parsedState.difficultyStates };
+            Object.keys(updatedDifficultyStates).forEach((difficulty) => {
+              const state =
+                updatedDifficultyStates[difficulty as unknown as Difficulty];
+              if (!state.isCompleted && state.lives > 0) {
+                const timeSinceLastUpdate = now - state.lastUpdate;
+                const additionalScore = Math.floor(timeSinceLastUpdate / 1000);
+                state.score += additionalScore;
+                state.lastUpdate = now;
+              }
+            });
+            const currentDifficultyState =
+              updatedDifficultyStates[parsedState.difficulty];
+            this.gameState = {
+              numbers: [],
+              operators: currentDifficultyState.isCompleted
+                ? currentDifficultyState.finalResult?.operators || [
+                    null,
+                    null,
+                    null,
+                    null,
+                  ]
+                : [null, null, null, null],
+              result: currentDifficultyState.isCompleted
+                ? currentDifficultyState.finalResult?.result || null
+                : null,
+              isCorrect: currentDifficultyState.isCompleted,
+              currentGameId: null,
+              difficulty: parsedState.difficulty,
+              attempts: 0,
+              isIntegerResult: true,
+              difficultyStates: updatedDifficultyStates,
+            };
+            return;
+          }
+        } catch (e) {
+          console.error("Failed to parse saved game state:", e);
+        }
+      }
+    }
+    // If no valid saved state, reset to default
+    this.gameState = this.getDefaultState();
+  }
+
   public calculateResult(
     numbers: number[],
     operators: Operator[]
@@ -388,15 +373,6 @@ export class MathGameHandler {
         this.dailyGames[this.getDifficultyKey(this.gameState.difficulty)].result
       : false;
 
-    if (this.gameState.currentGameId) {
-      await saveGameAttempt(
-        this.gameState.currentGameId,
-        this.gameState.numbers,
-        this.gameState.operators as string[],
-        result
-      );
-    }
-
     if (isCorrect) {
       const now = Date.now();
       const currentState =
@@ -504,12 +480,14 @@ export class MathGameHandler {
   }
 
   private saveState(): void {
-    const stateToSave: SavedGameState = {
-      difficultyStates: this.gameState.difficultyStates,
-      difficulty: this.gameState.difficulty,
-      savedDate: new Date().toISOString(),
-    };
-    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(stateToSave));
+    if (typeof window !== "undefined") {
+      const stateToSave: SavedGameState = {
+        difficultyStates: this.gameState.difficultyStates,
+        difficulty: this.gameState.difficulty,
+        savedDate: new Date().toISOString(),
+      };
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(stateToSave));
+    }
   }
 
   public calculateIntermediateResult(

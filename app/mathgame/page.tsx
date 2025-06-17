@@ -1,5 +1,4 @@
 import MathGame from "../components/MathGame/MathGame";
-import { createSupabaseServerClient } from "../lib/supabase/supabaseServerClient";
 
 export default async function MathGamePage() {
   return (
