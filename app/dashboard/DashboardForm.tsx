@@ -7,7 +7,6 @@ type DashboardFormProps = {
   user: {
     name: string;
     created_at?: string;
-    // ggf. weitere Felder
   };
 };
 
@@ -56,7 +55,8 @@ export default function DashboardForm({ user }: DashboardFormProps) {
           </div>
         ) : (
           <div className="text-neutral-500 text-sm italic">
-            Bearbeite deine Profildaten hier. Klicke dafür auf "Bearbeiten".
+            Bearbeite deine Profildaten hier. Klicke dafür auf
+            &quot;Bearbeiten&quot;.
           </div>
         )}
       </section>
