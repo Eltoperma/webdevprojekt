@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { supabaseBrowserClient } from "@/lib/supabase/supabaseComponentClient";
+import { supabaseBrowserClient } from "@/app/lib/supabase/supabaseComponentClient";
 
 type Game = {
   name: string;
