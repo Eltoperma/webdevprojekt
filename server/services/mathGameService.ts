@@ -92,6 +92,25 @@ export async function saveHighscore(
   score: number
 ): Promise<{ error: any }> {
   try {
+    // Check if a highscore already exists for this user, game, and difficulty
+    const { data: existing, error: fetchError } = await supabase
+      .from("math_game_highscore")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("math_game_history_id", mathGameHistoryId)
+      .eq("difficulty", difficulty)
+      .single();
+
+    if (fetchError) {
+      console.error("Failed to check for existing highscore:", fetchError);
+      return { error: fetchError };
+    }
+
+    if (existing) {
+      // User already has a score for this game/difficulty/date, do not write again
+      return { error: null };
+    }
+
     const { error } = await supabase.from("math_game_highscore").insert({
       math_game_history_id: mathGameHistoryId,
       difficulty,

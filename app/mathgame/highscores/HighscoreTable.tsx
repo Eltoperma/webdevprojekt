@@ -98,7 +98,7 @@ export default function HighscoreTable({ initialScores, userScores, loggedInUser
                     key={`${score.id}-${score.user_id}-${score.created_at}`}
                     className={
                       isUser
-                        ? 'bg-yellow-200 dark:bg-yellow-700'
+                        ? 'bg-green-100 dark:bg-green-800'
                         : ''
                     }
                   >
