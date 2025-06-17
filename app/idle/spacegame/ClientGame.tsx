@@ -7,8 +7,8 @@ import {
   IdleGame,
   IdleGameWorld,
   Resource,
-} from "@/lib/galaxy/galaxyTypes";
-import { generateChunkEntities } from "@/lib/galaxy/generateChunkEntities";
+} from "@/app/lib/galaxy/galaxyTypes";
+import { generateChunkEntities } from "@/app/lib/galaxy/generateChunkEntities";
 
 const CHUNK_PADDING = 50;
 const PLAYER_SIZE = 65;

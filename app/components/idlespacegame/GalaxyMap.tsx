@@ -1,6 +1,6 @@
 "use client";
 
-import { GalaxyEntity } from "@/lib/galaxy/galaxyTypes";
+import { GalaxyEntity } from "@/app/lib/galaxy/galaxyTypes";
 
 type Props = {
   entities: GalaxyEntity[];

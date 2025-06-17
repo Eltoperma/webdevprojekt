@@ -1,7 +1,7 @@
-import { supabaseLocal } from "@/lib/supabase/supabase";
-import { generateGalaxy } from "@/lib/galaxy/galaxy";
+import { supabaseLocal } from "@/app/lib/supabase/supabase";
+import { generateGalaxy } from "@/app/lib/galaxy/galaxy";
 import { v4 as uuidv4 } from "uuid";
-import { IdleGameWorld } from "@/lib/galaxy/galaxyTypes";
+import { IdleGameWorld } from "@/app/lib/galaxy/galaxyTypes";
 
 export async function loadWorld(userId: string) {
   // 1. Spielstand holen

@@ -1,5 +1,5 @@
 // app/idle/spacegame/page.tsx
-import { createSupabaseServerClient } from "@/lib/supabase/supabaseServerClient";
+import { createSupabaseServerClient } from "@/app/lib/supabase/supabaseServerClient";
 import ClientGame from "./ClientGame";
 import { redirect } from "next/navigation";
 import "server-only";
