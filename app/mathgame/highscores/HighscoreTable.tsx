@@ -3,12 +3,10 @@
 import { useState } from 'react';
 
 interface Highscore {
-  id: number;
   math_game_history_id: number;
   difficulty: string;
   user_id: string;
   score: number;
-  created_at: string;
   user_profile: {
     name: string;
   };
@@ -38,7 +36,7 @@ export default function HighscoreTable({ initialScores, userScores, loggedInUser
   }
 
   // Check if user's best score is already in the top 20
-  const userInTop = userBest && filteredScores.some((s) => s.id === userBest!.id);
+  const userInTop = userBest && filteredScores.some((s) => s.math_game_history_id === userBest!.math_game_history_id);
 
   // If not, calculate the user's rank and append as the last row
   let displayScores = filteredScores;
@@ -47,7 +45,7 @@ export default function HighscoreTable({ initialScores, userScores, loggedInUser
     // Calculate the user's rank among all scores for this difficulty
     const allScores = [...filteredScores, userBest]
       .sort((a, b) => a.score - b.score);
-    userRank = allScores.findIndex((s) => s.id === userBest!.id) + 1;
+    userRank = allScores.findIndex((s) => s.math_game_history_id === userBest!.math_game_history_id) + 1;
     // Show top 19 + userBest as 20th row
     displayScores = [
       ...filteredScores.slice(0, 19),
@@ -95,7 +93,7 @@ export default function HighscoreTable({ initialScores, userScores, loggedInUser
                 const isUser = loggedInUserId && score.user_id === loggedInUserId;
                 return (
                   <tr
-                    key={`${score.id}-${score.user_id}-${score.created_at}`}
+                    key={`${score.user_id}-${score.math_game_history_id}-${score.difficulty}`}
                     className={
                       isUser
                         ? 'bg-green-100 dark:bg-green-800'
