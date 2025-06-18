@@ -99,7 +99,7 @@ export async function saveHighscore(
       .eq("user_id", userId)
       .eq("math_game_history_id", mathGameHistoryId)
       .eq("difficulty", difficulty)
-      .single();
+      .maybeSingle();
 
     if (fetchError) {
       console.error("Failed to check for existing highscore:", fetchError);
