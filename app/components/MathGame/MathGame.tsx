@@ -122,10 +122,11 @@ export default function MathGame({ user }: MathGameProps) {
 
   const confirmResult = async () => {
     await gameHandler.confirmResult();
-    setGameState(gameHandler.getCurrentState());
-    if (gameState.gameState.isCorrect) {
+    const updatedState = gameHandler.getCurrentState();
+    setGameState(updatedState);
+    if (updatedState.gameState.isCorrect) {
       setShowConfetti(true);
-      setTimeout(() => setShowConfetti(false), 5000);
+      setTimeout(() => setShowConfetti(false), 8000);
     }
   };
 
@@ -165,6 +166,8 @@ export default function MathGame({ user }: MathGameProps) {
           height={windowSize.height}
           recycle={false}
           numberOfPieces={200}
+          gravity={0.3}
+          initialVelocityY={20}
         />
       )}
       
