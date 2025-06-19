@@ -14,7 +14,7 @@ export default function DashboardForm({ user }: DashboardFormProps) {
   const [editing, setEditing] = useState(false);
 
   return (
-    <div className="max-w-3xl mx-auto p-6 bg-white dark:bg-neutral-900 rounded-2xl shadow-md space-y-6">
+    <div className="max-w-3xl mx-auto p-6 m-20 bg-white dark:bg-neutral-900 rounded-2xl shadow-md space-y-6">
       <div>
         <h1 className="text-3xl font-semibold text-neutral-800 dark:text-neutral-100">
           Willkommen zurück, {user.name} 👋
@@ -47,7 +47,7 @@ export default function DashboardForm({ user }: DashboardFormProps) {
             <div className="flex justify-end gap-4">
               <button
                 onClick={() => setEditing(false)}
-                className="px-4 py-2 bg-neutral-200 hover:bg-neutral-300 text-sm rounded"
+                className="px-4 py-2 bg-neutral-200 hover:bg-neutral-300 text-sm rounded dark:bg-blue-800 dark:hover:bg-blue-700 text-neutral-900 dark:text-white transition"
               >
                 Abbrechen
               </button>

@@ -84,10 +84,16 @@ export default function LandingPageContent({
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-purple-500/5 to-pink-500/5 group-hover:from-blue-500/10 group-hover:via-purple-500/10 group-hover:to-pink-500/10 transition-all duration-300"></div>
                 <div className="relative z-10">
                   <h2 className="text-2xl font-semibold mb-3 text-black dark:text-white drop-shadow-sm">
-                    {game.name === "Math Game" ? "🧮 " : game.name === "Idle Space Game" ? "🚀 " : "🎮 "}
+                    {game.name === "Math Game"
+                      ? "🧮 "
+                      : game.name === "Idle Space Game"
+                      ? "🚀 "
+                      : "🎮 "}
                     {game.name}
                   </h2>
-                  <p className="text-md text-black/90 dark:text-white/90 leading-relaxed drop-shadow-sm">{game.description}</p>
+                  <p className="text-md text-black/90 dark:text-white/90 leading-relaxed drop-shadow-sm">
+                    {game.description}
+                  </p>
                 </div>
               </Link>
             ))
