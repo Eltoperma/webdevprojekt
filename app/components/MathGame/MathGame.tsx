@@ -98,13 +98,13 @@ export default function MathGame({ user }: MathGameProps) {
     setGameState(gameHandler.getCurrentState());
   }, [gameHandler]);
 
-  const handleOperatorClick = (index: number, operator: Operator) => {
-    gameHandler.handleOperatorClick(index, operator);
+  const handleOperatorClick = async (index: number, operator: Operator) => {
+    await gameHandler.handleOperatorClick(index, operator);
     setGameState(gameHandler.getCurrentState());
   };
 
-  const handleDifficultyChange = (newDifficulty: Difficulty) => {
-    gameHandler.handleDifficultyChange(newDifficulty);
+  const handleDifficultyChange = async (newDifficulty: Difficulty) => {
+    await gameHandler.handleDifficultyChange(newDifficulty);
     setGameState(gameHandler.getCurrentState());
   };
 
@@ -207,9 +207,9 @@ export default function MathGame({ user }: MathGameProps) {
       <div className="mb-4 sm:mb-6 p-4 sm:p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
         <div className="flex justify-end mb-2">
           <button
-            onClick={(e) => {
+            onClick={async (e) => {
               e.stopPropagation();
-              gameHandler.resetOperators();
+              await gameHandler.resetOperators();
               setGameState(gameHandler.getCurrentState());
             }}
             disabled={!state.operators.some(op => op !== null) || state.difficultyStates[state.difficulty].lives <= 0 || isLoading || state.difficultyStates[state.difficulty].isCompleted}
