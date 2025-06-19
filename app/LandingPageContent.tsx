@@ -126,7 +126,7 @@ export default function LandingPageContent({
           🔒 Datenschutz
         </Link>
         <Link
-          className="hover:opacity-80 transition-opacity flex items-center gap-2"
+          className="hover:underline hover:underline-offset-4 transition-opacity flex items-center gap-2"
           href="https://github.com/Eltoperma/webdevprojekt"
           target="_blank"
           rel="noopener noreferrer"
