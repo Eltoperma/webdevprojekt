@@ -108,18 +108,6 @@ export default function MathGame({ user }: MathGameProps) {
     setGameState(gameHandler.getCurrentState());
   };
 
-  const handleKeyPress = (event: KeyboardEvent) => {
-    gameHandler.handleKeyPress(event);
-    setGameState(gameHandler.getCurrentState());
-  };
-
-  useEffect(() => {
-    window.addEventListener('keydown', handleKeyPress);
-    return () => {
-      window.removeEventListener('keydown', handleKeyPress);
-    };
-  }, []);
-
   const confirmResult = async () => {
     await gameHandler.confirmResult();
     const updatedState = gameHandler.getCurrentState();
@@ -131,8 +119,7 @@ export default function MathGame({ user }: MathGameProps) {
   };
 
   const handleContainerClick = () => {
-    gameHandler.handleOperatorClick(-1, '+' as Operator); // Use -1 as index and any operator to just switch modes
-    setGameState(gameHandler.getCurrentState());
+    // Remove keyboard mode switching
   };
 
   if (isLoading) {
@@ -156,7 +143,7 @@ export default function MathGame({ user }: MathGameProps) {
     );
   }
 
-  const { gameState: state, selectedOperatorIndex, isKeyboardMode } = gameState;
+  const { gameState: state } = gameState;
 
   return (
     <div className="p-4 sm:p-8 max-w-2xl mx-auto" onClick={handleContainerClick}>
@@ -248,9 +235,6 @@ export default function MathGame({ user }: MathGameProps) {
                 <span className="text-base sm:text-2xl font-mono dark:text-white px-0.5 sm:px-1 whitespace-nowrap">{num}</span>
                 {i < state.operators.length && (
                   <div className="mx-0.5 sm:mx-2 grid grid-cols-2 gap-0.5 sm:gap-1 flex-shrink-0 relative p-0.5 sm:p-1">
-                    {selectedOperatorIndex === i && isKeyboardMode && (
-                      <div className="absolute inset-0 border-2 border-blue-500 dark:border-blue-400 rounded-lg opacity-50" />
-                    )}
                     <button
                       onClick={() => handleOperatorClick(i, '+')}
                       disabled={state.operators.includes('+') || state.difficultyStates[state.difficulty].lives <= 0 || isLoading || state.difficultyStates[state.difficulty].isCompleted}
