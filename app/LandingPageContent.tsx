@@ -53,7 +53,7 @@ export default function LandingPageContent({
 
         {session ? (
           <p className="text-lg text-center sm:text-left">
-            Willkommen zurück!{" "}
+            Willkommen zurück! 🎮{" "}
             <Link className="underline" href="/dashboard">
               Zum Dashboard →
             </Link>
@@ -67,22 +67,34 @@ export default function LandingPageContent({
             <Link className="underline" href="/register">
               registriere dich
             </Link>
-            :)
+            🚀
           </p>
         )}
 
         <div className="grid w-full gap-6 sm:grid-cols-2">
           {loading ? (
-            <p className="text-center w-full">Lade Spiele …</p>
+            <p className="text-center w-full">Lade Spiele … ⚡</p>
           ) : (
             games.map((game) => (
               <Link
                 key={game.href}
                 href={game.href}
-                className="rounded-2xl border border-white/[.1] bg-white/[.02] p-8 hover:bg-white/[.05] transition-colors"
+                className="group rounded-2xl border border-white/20 bg-white/10 backdrop-blur-md p-8 hover:bg-white/20 transition-all duration-300 hover:scale-105 hover:shadow-2xl relative overflow-hidden"
               >
-                <h2 className="text-2xl font-semibold mb-2">{game.name}</h2>
-                <p className="text-md text-gray-500">{game.description}</p>
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-purple-500/5 to-pink-500/5 group-hover:from-blue-500/10 group-hover:via-purple-500/10 group-hover:to-pink-500/10 transition-all duration-300"></div>
+                <div className="relative z-10">
+                  <h2 className="text-2xl font-semibold mb-3 text-black dark:text-white drop-shadow-sm">
+                    {game.name === "Math Game"
+                      ? "🧮 "
+                      : game.name === "Idle Space Game"
+                      ? "🚀 "
+                      : "🎮 "}
+                    {game.name}
+                  </h2>
+                  <p className="text-md text-black/90 dark:text-white/90 leading-relaxed drop-shadow-sm">
+                    {game.description}
+                  </p>
+                </div>
               </Link>
             ))
           )}
@@ -91,15 +103,17 @@ export default function LandingPageContent({
         <div className="flex gap-6 items-center flex-col sm:flex-row mt-10">
           <Link
             href="/about"
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-white text-black gap-2 hover:bg-gray-300 font-medium text-base sm:text-lg h-12 sm:h-14 px-6 sm:px-7 sm:w-auto"
+            className="rounded-full border border-white/20 transition-all duration-300 flex items-center justify-center bg-white/10 backdrop-blur-md text-black dark:text-white gap-2 hover:bg-white/20 font-medium text-base sm:text-lg h-12 sm:h-14 px-6 sm:px-7 sm:w-auto shadow-lg hover:shadow-xl hover:scale-105 relative overflow-hidden group"
           >
-            Über das Projekt
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20 group-hover:from-blue-500/30 group-hover:via-purple-500/30 group-hover:to-pink-500/30 transition-all duration-300"></div>
+            <span className="relative z-10">💡 Über das Projekt</span>
           </Link>
           <Link
             href="/faq"
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-white text-black gap-2 hover:bg-gray-300 font-medium text-base sm:text-lg h-12 sm:h-14 px-6 sm:px-7 sm:w-auto"
+            className="rounded-full border border-white/20 transition-all duration-300 flex items-center justify-center bg-white/10 backdrop-blur-md text-black dark:text-white gap-2 hover:bg-white/20 font-medium text-base sm:text-lg h-12 sm:h-14 px-6 sm:px-7 sm:w-auto shadow-lg hover:shadow-xl hover:scale-105 relative overflow-hidden group"
           >
-            Häufige Fragen
+            <div className="absolute inset-0 bg-gradient-to-r from-green-500/20 via-teal-500/20 to-cyan-500/20 group-hover:from-green-500/30 group-hover:via-teal-500/30 group-hover:to-cyan-500/30 transition-all duration-300"></div>
+            <span className="relative z-10">❓ Häufige Fragen</span>
           </Link>
         </div>
       </main>
@@ -109,15 +123,30 @@ export default function LandingPageContent({
           className="hover:underline hover:underline-offset-4"
           href="/impressum"
         >
-          Impressum
+          📄 Impressum
         </Link>
         <Link
           className="hover:underline hover:underline-offset-4"
           href="/datenschutz"
         >
-          Datenschutz
+          🔒 Datenschutz
         </Link>
-        <span>© {new Date().getFullYear()} GameHub Projekt</span>
+        <Link
+          className="hover:underline hover:underline-offset-4 transition-opacity flex items-center gap-2"
+          href="https://github.com/Eltoperma/webdevprojekt"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <Image
+            src="/icons/github.svg"
+            alt="GitHub"
+            width={20}
+            height={20}
+            className="w-5 h-5"
+          />
+          GitHub
+        </Link>
+        <span>© {new Date().getFullYear()} GameHub Projekt 🎯</span>
       </footer>
     </div>
   );

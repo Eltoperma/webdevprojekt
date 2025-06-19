@@ -3,31 +3,59 @@
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
+import Link from 'next/link';
 import { Operator, Difficulty } from '../types/math';
 import { MathGameHandler } from '../MathGame/MathGameHandler';
+
+interface UserProfile {
+  id: string;
+  username: string;
+  email: string;
+  created_at: string;
+  // Add other fields as needed
+}
+
+interface MathGameProps {
+  user: UserProfile | null;
+}
 
 const ReactConfetti = dynamic(() => import('react-confetti'), {
   ssr: false
 });
 
+function getDifficultyLabel(difficulty: Difficulty): string {
+  switch (difficulty) {
+    case 1:
+      return "easy";
+    case 2:
+      return "medium";
+    case 3:
+      return "hard";
+    case 4:
+      return "expert";
+    default:
+      return "unknown";
+  }
+}
+
 function getDifficultyDescription(difficulty: Difficulty): string {
   switch (difficulty) {
     case 1:
-      return "Level 1: Nur positive einstellige Zahlen (1-9)";
+      return "Level 1: Only positive single-digit numbers (1-9)";
     case 2:
-      return "Level 2: Positive ein- und zweistellige Zahlen (1-99)";
+      return "Level 2: Positive one- and two-digit numbers (1-99)";
     case 3:
-      return "Level 3: Positive und negative ein- und zweistellige Zahlen (-99 bis 99)";
+      return "Level 3: Positive and negative one- and two-digit numbers (-99 to 99)";
     case 4:
-      return "Level 4: Positive und negative ein- und zweistellige Zahlen (-99 bis 99)";
+      return "Level 4: Positive and negative one- and two-digit numbers (-99 to 99)";
     default:
-      return "Unbekannter Schwierigkeitsgrad";
+      return "Unknown difficulty";
   }
 }
-export default function MathGame() {
+export default function MathGame({ user }: MathGameProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [gameHandler] = useState(() => new MathGameHandler());
+  const [gameHandler] = useState(() => new MathGameHandler(user?.id || null));
   const [gameState, setGameState] = useState(gameHandler.getCurrentState());
   const [showConfetti, setShowConfetti] = useState(false);
   const [windowSize, setWindowSize] = useState({
@@ -50,7 +78,7 @@ export default function MathGame() {
     };
 
     initializeGame();
-  }, []);
+  }, [gameHandler]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -68,7 +96,7 @@ export default function MathGame() {
     // Load saved state from client localStorage after mount
     gameHandler.loadSavedStateFromClient();
     setGameState(gameHandler.getCurrentState());
-  }, []);
+  }, [gameHandler]);
 
   const handleOperatorClick = (index: number, operator: Operator) => {
     gameHandler.handleOperatorClick(index, operator);
@@ -80,30 +108,18 @@ export default function MathGame() {
     setGameState(gameHandler.getCurrentState());
   };
 
-  const handleKeyPress = (event: KeyboardEvent) => {
-    gameHandler.handleKeyPress(event);
-    setGameState(gameHandler.getCurrentState());
-  };
-
-  useEffect(() => {
-    window.addEventListener('keydown', handleKeyPress);
-    return () => {
-      window.removeEventListener('keydown', handleKeyPress);
-    };
-  }, []);
-
   const confirmResult = async () => {
     await gameHandler.confirmResult();
-    setGameState(gameHandler.getCurrentState());
-    if (gameState.gameState.isCorrect) {
+    const updatedState = gameHandler.getCurrentState();
+    setGameState(updatedState);
+    if (updatedState.gameState.isCorrect) {
       setShowConfetti(true);
-      setTimeout(() => setShowConfetti(false), 5000);
+      setTimeout(() => setShowConfetti(false), 8000);
     }
   };
 
   const handleContainerClick = () => {
-    gameHandler.handleOperatorClick(-1, '+' as Operator); // Use -1 as index and any operator to just switch modes
-    setGameState(gameHandler.getCurrentState());
+    // Remove keyboard mode switching
   };
 
   if (isLoading) {
@@ -127,7 +143,7 @@ export default function MathGame() {
     );
   }
 
-  const { gameState: state, selectedOperatorIndex, isKeyboardMode } = gameState;
+  const { gameState: state } = gameState;
 
   return (
     <div className="p-4 sm:p-8 max-w-2xl mx-auto" onClick={handleContainerClick}>
@@ -137,13 +153,15 @@ export default function MathGame() {
           height={windowSize.height}
           recycle={false}
           numberOfPieces={200}
+          gravity={0.3}
+          initialVelocityY={20}
         />
       )}
       
       
       
       <div className="mb-4 sm:mb-6">
-        <h2 className="text-base sm:text-lg font-semibold mb-2 dark:text-white">Schwierigkeitsgrad</h2>
+        <h2 className="text-base sm:text-lg font-semibold mb-2 dark:text-white">Difficulty</h2>
         <div className="grid grid-cols-2 sm:flex sm:gap-2 gap-1">
           {[1, 2, 3, 4].map((level) => (
             <button
@@ -157,7 +175,7 @@ export default function MathGame() {
               } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <div className="flex items-center justify-center gap-1 sm:gap-2">
-                <span className="text-sm sm:text-base">Level {level}</span>
+                <span className="text-sm sm:text-base capitalize">{getDifficultyLabel(level as Difficulty)}</span>
                 {state.difficultyStates[level as Difficulty].isCompleted && (
                   state.difficultyStates[level as Difficulty].lives > 0 ? (
                     <Image 
@@ -217,9 +235,6 @@ export default function MathGame() {
                 <span className="text-base sm:text-2xl font-mono dark:text-white px-0.5 sm:px-1 whitespace-nowrap">{num}</span>
                 {i < state.operators.length && (
                   <div className="mx-0.5 sm:mx-2 grid grid-cols-2 gap-0.5 sm:gap-1 flex-shrink-0 relative p-0.5 sm:p-1">
-                    {selectedOperatorIndex === i && isKeyboardMode && (
-                      <div className="absolute inset-0 border-2 border-blue-500 dark:border-blue-400 rounded-lg opacity-50" />
-                    )}
                     <button
                       onClick={() => handleOperatorClick(i, '+')}
                       disabled={state.operators.includes('+') || state.difficultyStates[state.difficulty].lives <= 0 || isLoading || state.difficultyStates[state.difficulty].isCompleted}
@@ -293,13 +308,13 @@ export default function MathGame() {
         {(state.difficulty === 1 || state.difficulty === 2) && state.operators.some(op => op !== null) && (
           <div className="mt-2 text-center">
             <div className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
-              Zwischenergebnis: {gameHandler.calculateIntermediateResult(state.numbers, state.operators)}
+              Intermediate result: {gameHandler.calculateIntermediateResult(state.numbers, state.operators)}
             </div>
           </div>
         )}
 
         <div className="mt-4 flex justify-center items-center gap-2">
-          <span className="text-xs sm:text-sm font-semibold dark:text-white">Leben:</span>
+          <span className="text-xs sm:text-sm font-semibold dark:text-white">Lives:</span>
           {[...Array(3)].map((_, i) => (
             <Image
               key={i}
@@ -316,7 +331,7 @@ export default function MathGame() {
           <div className="mt-4 text-center">
             {state.difficultyStates[state.difficulty].lives <= 0 ? (
               <div className="p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                <h2 className="text-lg font-semibold mb-2 dark:text-white">Lösung:</h2>
+                <h2 className="text-lg font-semibold mb-2 dark:text-white">Solution:</h2>
                 <div className="flex items-center justify-center space-x-2">
                   {state.numbers.map((num, i) => (
                     <div key={i} className="flex items-center">
@@ -347,7 +362,7 @@ export default function MathGame() {
                         height={24}
                         className="h-6 w-6 mr-2" 
                       />
-                      <span>Richtig!</span>
+                      <span>Correct!</span>
                     </div>
                     <div className="flex items-center justify-center space-x-2 text-lg">
                       {state.numbers.map((num, i) => (
@@ -361,12 +376,12 @@ export default function MathGame() {
                       <span className="ml-2">= {state.result}</span>
                     </div>
                     <div className="mt-4 text-lg font-mono">
-                      Final Score: {state.difficultyStates[state.difficulty].score}
+                      Final score: {state.difficultyStates[state.difficulty].score}
                     </div>
                   </div>
                 ) : (
                   <>
-                    Ergebnis: {state.result}
+                    Result: {state.result}
                     {!state.isIntegerResult && (
                       <span className="ml-2 inline-flex items-center text-sm sm:text-base">
                         <Image 
@@ -376,7 +391,7 @@ export default function MathGame() {
                           height={20}
                           className="h-4 w-4 sm:h-5 sm:w-5" 
                         />
-                        <span className="ml-1">Das Ergebnis muss eine ganze Zahl sein!</span>
+                        <span className="ml-1">The result must be an integer!</span>
                       </span>
                     )}
                   </>
@@ -403,6 +418,21 @@ export default function MathGame() {
               </div>
             </div>
           ))}
+      </div>
+      <div className="flex justify-center mt-8">
+        <Link
+          href="/mathgame/highscores"
+          className={
+            `relative inline-block px-2 sm:px-4 py-2 rounded font-semibold min-w-0 sm:min-w-[100px] 
+            bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white 
+            transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-600 border border-gray-200 dark:border-gray-700`
+          }
+        >
+          <span className="absolute -top-4 -left-4 w-8 h-8">
+            <Image src="/icons/crown.svg" alt="Highscore" width={32} height={32} className="w-8 h-8 rotate-340 drop-shadow-lg" />
+          </span>
+          Highscores
+        </Link>
       </div>
     </div>
   );
