@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabaseBrowserClient } from "@/app/lib/supabase/supabaseComponentClient";
 
 export default function LoginPage() {
@@ -11,6 +11,9 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get("redirect") || "/dashboard";
 
   const handleLogin = async () => {
     setLoading(true);
@@ -46,7 +49,7 @@ export default function LoginPage() {
         return;
       }
 
-      router.push("/dashboard");
+      router.push(redirect);
     } catch (err) {
       setError("Netzwerkfehler: " + String(err));
     } finally {

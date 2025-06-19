@@ -9,7 +9,7 @@ export default async function DashboardPage() {
     data: { session },
   } = await supabaseServerClient.auth.getSession();
 
-  if (!session) redirect("/login");
+  if (!session) redirect("/login?redirect=/dashboard");
 
   const { data: user, error } = await supabaseServerClient
     .from("user_profile")
@@ -18,7 +18,7 @@ export default async function DashboardPage() {
     .single();
 
   if (!user || error) {
-    redirect("/login"); // oder Fehler anzeigen
+    redirect("/login?redirect=/dashboard"); // oder Fehler anzeigen
   }
 
   return <DashboardForm user={user} />;
