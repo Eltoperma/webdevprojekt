@@ -9,18 +9,19 @@ import { supabaseBrowserClient } from "@/app/lib/supabase/supabaseComponentClien
 
 export default function LoginPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  // const searchParams = useSearchParams();
 
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [redirect, setRedirect] = useState("/dashboard");
+  const redirect = "/dashboard";
+  // const [redirect, setRedirect] = useState("/dashboard"); //@todo fix
 
-  useEffect(() => {
-    const param = searchParams.get("redirect");
-    if (param) setRedirect(param);
-  }, [searchParams]);
+  // useEffect(() => {
+  //   const param = searchParams.get("redirect");
+  //   if (param) setRedirect(param);
+  // }, [searchParams]);
 
   const handleLogin = async () => {
     setLoading(true);
