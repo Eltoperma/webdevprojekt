@@ -9,7 +9,7 @@ export default async function SettingsPage() {
     data: { session },
   } = await supabaseServerClient.auth.getSession();
 
-  if (!session) redirect("/login");
+  if (!session) redirect("/login?redirect=/settings");
 
   const { data: user, error: error } = await supabaseServerClient
     .from("user_profile")

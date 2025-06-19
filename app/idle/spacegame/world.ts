@@ -130,7 +130,7 @@ export async function loadWorld(userId: string) {
     entities: generateGalaxy(seedData.value, resources || []),
   };
 
-  console.log("🌌 Welt generiert:", worldData);
+  console.log("🌌 Welt generiert:", seedData);
 
   return {
     world: worldData,

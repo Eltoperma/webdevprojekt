@@ -12,7 +12,7 @@ export default async function SpaceGamePage() {
   } = await supabaseServerClient.auth.getSession();
 
   if (!session?.user.id) {
-    redirect("/login");
+    redirect("/login?redirect=/idle/spacegame");
   }
 
   const { data: resources, error: resourceError } = await supabaseServerClient
