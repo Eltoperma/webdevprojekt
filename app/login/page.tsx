@@ -1,19 +1,24 @@
 "use client";
 
 import { useState } from "react";
+import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabaseBrowserClient } from "@/app/lib/supabase/supabaseComponentClient";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [redirect, setRedirect] = useState("/dashboard");
 
-  const searchParams = useSearchParams();
-  const redirect = searchParams.get("redirect") || "/dashboard";
+  useEffect(() => {
+    const param = searchParams.get("redirect");
+    if (param) setRedirect(param);
+  }, [searchParams]);
 
   const handleLogin = async () => {
     setLoading(true);
