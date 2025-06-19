@@ -78,7 +78,7 @@ export default function MathGame({ user }: MathGameProps) {
     };
 
     initializeGame();
-  }, []);
+  }, [gameHandler]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -96,7 +96,7 @@ export default function MathGame({ user }: MathGameProps) {
     // Load saved state from client localStorage after mount
     gameHandler.loadSavedStateFromClient();
     setGameState(gameHandler.getCurrentState());
-  }, []);
+  }, [gameHandler]);
 
   const handleOperatorClick = (index: number, operator: Operator) => {
     gameHandler.handleOperatorClick(index, operator);
@@ -429,7 +429,7 @@ export default function MathGame({ user }: MathGameProps) {
           }
         >
           <span className="absolute -top-4 -left-4 w-8 h-8">
-            <img src="/icons/crown.svg" alt="Highscore" className="w-8 h-8 rotate-340 drop-shadow-lg" />
+            <Image src="/icons/crown.svg" alt="Highscore" width={32} height={32} className="w-8 h-8 rotate-340 drop-shadow-lg" />
           </span>
           Highscores
         </Link>

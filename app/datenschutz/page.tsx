@@ -27,7 +27,7 @@ export default function DatenschutzPage() {
               <div className="space-y-3">
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white">Wer ist verantwortlich für die Datenerfassung?</h3>
                 <p className="leading-relaxed">
-                  Die Datenverarbeitung auf dieser Website erfolgt durch den Websitebetreiber. Dessen Kontaktdaten können Sie dem Abschnitt "Hinweis zur Verantwortlichen Stelle" in dieser Datenschutzerklärung entnehmen.
+                  Die Datenverarbeitung auf dieser Website erfolgt durch den Websitebetreiber. Dessen Kontaktdaten können Sie dem Abschnitt &ldquo;Hinweis zur Verantwortlichen Stelle&rdquo; in dieser Datenschutzerklärung entnehmen.
                 </p>
                 
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white">Wie erfassen wir Ihre Daten?</h3>
