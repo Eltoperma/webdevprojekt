@@ -44,8 +44,6 @@ interface SavedGameState {
 export class MathGameHandler {
   private gameState: GameState;
   private dailyGames: DailyGames | null = null;
-  private selectedOperatorIndex: number = 0;
-  private isKeyboardMode: boolean = false;
   private readonly STORAGE_KEY = "mathGameState";
   private userId: string | null = null;
 
@@ -239,23 +237,14 @@ export class MathGameHandler {
   public getCurrentState() {
     return {
       gameState: this.gameState,
-      selectedOperatorIndex: this.selectedOperatorIndex,
-      isKeyboardMode: this.isKeyboardMode,
       dailyGames: this.dailyGames,
     };
   }
 
   public handleOperatorClick(index: number, operator: Operator): void {
-    if (index === -1) {
-      this.isKeyboardMode = false;
-      this.selectedOperatorIndex = -1;
-      this.saveState();
-      return;
-    }
+    if (index === -1) return;
 
     if (this.isOperatorUsed(operator)) return;
-    this.isKeyboardMode = false;
-    this.selectedOperatorIndex = -1;
 
     const newOperators = [...this.gameState.operators];
     newOperators[index] = operator;
@@ -270,47 +259,11 @@ export class MathGameHandler {
   }
 
   public handleOperatorSelect(operator: Operator): void {
-    if (this.selectedOperatorIndex < this.gameState.operators.length) {
-      this.isKeyboardMode = true;
-      this.handleOperatorClick(this.selectedOperatorIndex, operator);
-    }
+    // Remove keyboard-specific logic
   }
 
   public handleKeyPress(event: KeyboardEvent): void {
-    if (event.key.toLowerCase() === "a") {
-      this.isKeyboardMode = true;
-      const prevDifficulty = (((this.gameState.difficulty + 2) % 4) +
-        1) as Difficulty;
-      this.handleDifficultyChange(prevDifficulty);
-      return;
-    }
-    if (event.key.toLowerCase() === "d") {
-      this.isKeyboardMode = true;
-      const nextDifficulty = ((this.gameState.difficulty % 4) +
-        1) as Difficulty;
-      this.handleDifficultyChange(nextDifficulty);
-      return;
-    }
-
-    if (
-      this.gameState.difficultyStates[this.gameState.difficulty].isCompleted ||
-      this.gameState.difficultyStates[this.gameState.difficulty].lives <= 0
-    ) {
-      return;
-    }
-
-    if (event.key >= "1" && event.key <= "4") {
-      const operators: Operator[] = ["+", "-", "*", "/"];
-      const operatorIndex = parseInt(event.key) - 1;
-      this.handleOperatorSelect(operators[operatorIndex]);
-    } else if (event.key === " ") {
-      this.isKeyboardMode = true;
-      if (this.selectedOperatorIndex < this.gameState.operators.length - 1) {
-        this.selectedOperatorIndex++;
-      } else if (this.gameState.operators.every((op) => op !== null)) {
-        this.confirmResult();
-      }
-    }
+    // Remove all keyboard handling
   }
 
   public handleDifficultyChange(newDifficulty: Difficulty): void {
@@ -361,7 +314,6 @@ export class MathGameHandler {
       difficultyStates: updatedDifficultyStates,
     };
 
-    this.selectedOperatorIndex = 0;
     this.saveState();
   }
 
@@ -501,7 +453,6 @@ export class MathGameHandler {
           }),
       };
     }
-    this.selectedOperatorIndex = 0;
     this.saveState();
   }
 
@@ -578,14 +529,6 @@ export class MathGameHandler {
       isCorrect: false,
       difficultyStates: updatedDifficultyStates,
     };
-    this.selectedOperatorIndex = 0;
-
-    // Save the updated state to localStorage
-    const stateToSave: SavedGameState = {
-      difficultyStates: updatedDifficultyStates,
-      difficulty: this.gameState.difficulty,
-      savedDate: new Date().toISOString(),
-    };
-    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(stateToSave));
+    this.saveState();
   }
 }
