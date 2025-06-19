@@ -82,7 +82,7 @@ export default function LandingPageContent({
                 className="rounded-2xl border border-white/[.1] bg-white/[.02] p-8 hover:bg-white/[.05] transition-colors"
               >
                 <h2 className="text-2xl font-semibold mb-2">{game.name}</h2>
-                <p className="text-md text-gray-300">{game.description}</p>
+                <p className="text-md text-gray-500">{game.description}</p>
               </Link>
             ))
           )}
