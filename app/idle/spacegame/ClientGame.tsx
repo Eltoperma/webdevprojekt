@@ -117,7 +117,7 @@ export default function ClientGame({ userId, world, game, resources }: Props) {
         const entities = generateChunkEntities(
           `${game.seed}-${chunkKey}`,
           resources,
-          20,
+          2,
           { width: viewportSize.width, height: viewportSize.height },
           chunkOffset
         );

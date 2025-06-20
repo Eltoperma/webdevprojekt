@@ -4,48 +4,12 @@ import {
   DailyGames,
   saveHighscore,
 } from "../../../server/services/mathGameService";
-import { supabaseBrowserClient } from "../../lib/supabase/supabaseComponentClient";
-
-interface DifficultyState {
-  lives: number;
-  previousAttempts: Array<{
-    numbers: number[];
-    operators: (Operator | null)[];
-    result: number;
-  }>;
-  isCompleted: boolean;
-  finalResult?: {
-    numbers: number[];
-    operators: (Operator | null)[];
-    result: number;
-  };
-  score: number;
-  lastUpdate: number;
-}
-
-interface GameState {
-  numbers: number[];
-  operators: (Operator | null)[];
-  result: number | null;
-  attempts: number;
-  isIntegerResult: boolean;
-  difficulty: Difficulty;
-  isCorrect: boolean;
-  currentGameId: number | null;
-  difficultyStates: Record<Difficulty, DifficultyState>;
-}
-
-interface SavedGameState {
-  difficultyStates: Record<Difficulty, DifficultyState>;
-  difficulty: Difficulty;
-  savedDate: string;
-}
+import { DifficultyState, GameState, SavedGameState } from "./types/interfaces";
+import { encryptData, decryptData } from "./utils/crypto";
 
 export class MathGameHandler {
   private gameState: GameState;
   private dailyGames: DailyGames | null = null;
-  private selectedOperatorIndex: number = 0;
-  private isKeyboardMode: boolean = false;
   private readonly STORAGE_KEY = "mathGameState";
   private userId: string | null = null;
 
@@ -98,62 +62,128 @@ export class MathGameHandler {
     };
   }
 
-  public loadSavedStateFromClient(): void {
-    if (typeof window !== "undefined") {
-      const savedState = localStorage.getItem(this.STORAGE_KEY);
-      if (savedState) {
-        try {
-          const parsedState = JSON.parse(savedState) as SavedGameState;
-          const savedDate = new Date(parsedState.savedDate);
-          const currentDate = new Date();
-          const isToday =
-            savedDate.getDate() === currentDate.getDate() &&
-            savedDate.getMonth() === currentDate.getMonth() &&
-            savedDate.getFullYear() === currentDate.getFullYear();
-          if (isToday) {
-            const now = Date.now();
-            const updatedDifficultyStates = { ...parsedState.difficultyStates };
-            Object.keys(updatedDifficultyStates).forEach((difficulty) => {
-              const state =
-                updatedDifficultyStates[difficulty as unknown as Difficulty];
-              if (!state.isCompleted && state.lives > 0) {
-                const timeSinceLastUpdate = now - state.lastUpdate;
-                const additionalScore = Math.floor(timeSinceLastUpdate / 1000);
-                state.score += additionalScore;
-                state.lastUpdate = now;
-              }
-            });
-            const currentDifficultyState =
-              updatedDifficultyStates[parsedState.difficulty];
-            this.gameState = {
-              numbers: [],
-              operators: currentDifficultyState.isCompleted
-                ? currentDifficultyState.finalResult?.operators || [
-                    null,
-                    null,
-                    null,
-                    null,
-                  ]
-                : [null, null, null, null],
-              result: currentDifficultyState.isCompleted
-                ? currentDifficultyState.finalResult?.result || null
-                : null,
-              isCorrect: currentDifficultyState.isCompleted,
-              currentGameId: null,
-              difficulty: parsedState.difficulty,
-              attempts: 0,
-              isIntegerResult: true,
-              difficultyStates: updatedDifficultyStates,
-            };
-            return;
-          }
-        } catch (e) {
-          console.error("Failed to parse saved game state:", e);
-        }
+  private isSameDay(date1: Date, date2: Date): boolean {
+    return (
+      date1.getDate() === date2.getDate() &&
+      date1.getMonth() === date2.getMonth() &&
+      date1.getFullYear() === date2.getFullYear()
+    );
+  }
+
+  private updateScoreForTimePassed(
+    difficultyStates: Record<Difficulty, DifficultyState>
+  ): void {
+    const now = Date.now();
+    Object.keys(difficultyStates).forEach((difficulty) => {
+      const state = difficultyStates[difficulty as unknown as Difficulty];
+      if (!state.isCompleted && state.lives > 0) {
+        const timeSinceLastUpdate = now - state.lastUpdate;
+        const additionalScore = Math.floor(timeSinceLastUpdate / 1000);
+        state.score = state.score + additionalScore;
+        state.lastUpdate = now;
       }
+    });
+  }
+
+  private createGameStateFromSavedState(
+    parsedState: SavedGameState,
+    updatedDifficultyStates: Record<Difficulty, DifficultyState>
+  ): GameState {
+    const currentDifficultyState =
+      updatedDifficultyStates[parsedState.difficulty];
+
+    return {
+      numbers: [],
+      operators: currentDifficultyState.isCompleted
+        ? currentDifficultyState.finalResult?.operators || [
+            null,
+            null,
+            null,
+            null,
+          ]
+        : [null, null, null, null],
+      result: currentDifficultyState.isCompleted
+        ? currentDifficultyState.finalResult?.result || null
+        : null,
+      isCorrect: currentDifficultyState.isCompleted,
+      currentGameId: null,
+      difficulty: parsedState.difficulty,
+      attempts: 0,
+      isIntegerResult: true,
+      difficultyStates: updatedDifficultyStates,
+    };
+  }
+
+  public async loadSavedStateFromClient(): Promise<void> {
+    if (typeof window === "undefined") {
+      return;
     }
-    // If no valid saved state, reset to default
-    this.gameState = this.getDefaultState();
+
+    const savedState = localStorage.getItem(this.STORAGE_KEY);
+    if (!savedState) {
+      this.gameState = this.getDefaultState();
+      return;
+    }
+
+    try {
+      // Try to parse as encrypted data first
+      const encryptedData = JSON.parse(savedState);
+
+      // Check if it's the new encrypted format (has data and hash properties)
+      if (encryptedData.data && encryptedData.hash) {
+        const parsedState = (await decryptData(
+          encryptedData
+        )) as SavedGameState;
+
+        if (!parsedState) {
+          console.warn("Failed to decrypt saved state - using default state");
+          this.gameState = this.getDefaultState();
+          return;
+        }
+
+        const savedDate = new Date(parsedState.savedDate);
+        const currentDate = new Date();
+
+        if (!this.isSameDay(savedDate, currentDate)) {
+          this.gameState = this.getDefaultState();
+          return;
+        }
+
+        const updatedDifficultyStates = { ...parsedState.difficultyStates };
+        this.updateScoreForTimePassed(updatedDifficultyStates);
+
+        this.gameState = this.createGameStateFromSavedState(
+          parsedState,
+          updatedDifficultyStates
+        );
+      } else {
+        // Handle old plain JSON format
+        console.log("Migrating from old plain JSON format to encrypted format");
+        const parsedState = encryptedData as SavedGameState;
+
+        const savedDate = new Date(parsedState.savedDate);
+        const currentDate = new Date();
+
+        if (!this.isSameDay(savedDate, currentDate)) {
+          this.gameState = this.getDefaultState();
+          return;
+        }
+
+        const updatedDifficultyStates = { ...parsedState.difficultyStates };
+        this.updateScoreForTimePassed(updatedDifficultyStates);
+
+        this.gameState = this.createGameStateFromSavedState(
+          parsedState,
+          updatedDifficultyStates
+        );
+
+        // Save in new encrypted format
+        await this.saveState();
+      }
+    } catch (error) {
+      console.error("Failed to parse saved game state:", error);
+      this.gameState = this.getDefaultState();
+    }
   }
 
   public calculateResult(
@@ -239,23 +269,17 @@ export class MathGameHandler {
   public getCurrentState() {
     return {
       gameState: this.gameState,
-      selectedOperatorIndex: this.selectedOperatorIndex,
-      isKeyboardMode: this.isKeyboardMode,
       dailyGames: this.dailyGames,
     };
   }
 
-  public handleOperatorClick(index: number, operator: Operator): void {
-    if (index === -1) {
-      this.isKeyboardMode = false;
-      this.selectedOperatorIndex = -1;
-      this.saveState();
-      return;
-    }
+  public async handleOperatorClick(
+    index: number,
+    operator: Operator
+  ): Promise<void> {
+    if (index === -1) return;
 
     if (this.isOperatorUsed(operator)) return;
-    this.isKeyboardMode = false;
-    this.selectedOperatorIndex = -1;
 
     const newOperators = [...this.gameState.operators];
     newOperators[index] = operator;
@@ -266,70 +290,29 @@ export class MathGameHandler {
       result: null,
       isCorrect: false,
     };
-    this.saveState();
+    await this.saveState();
   }
 
-  public handleOperatorSelect(operator: Operator): void {
-    if (this.selectedOperatorIndex < this.gameState.operators.length) {
-      this.isKeyboardMode = true;
-      this.handleOperatorClick(this.selectedOperatorIndex, operator);
-    }
-  }
-
-  public handleKeyPress(event: KeyboardEvent): void {
-    if (event.key.toLowerCase() === "a") {
-      this.isKeyboardMode = true;
-      const prevDifficulty = (((this.gameState.difficulty + 2) % 4) +
-        1) as Difficulty;
-      this.handleDifficultyChange(prevDifficulty);
-      return;
-    }
-    if (event.key.toLowerCase() === "d") {
-      this.isKeyboardMode = true;
-      const nextDifficulty = ((this.gameState.difficulty % 4) +
-        1) as Difficulty;
-      this.handleDifficultyChange(nextDifficulty);
-      return;
-    }
-
-    if (
-      this.gameState.difficultyStates[this.gameState.difficulty].isCompleted ||
-      this.gameState.difficultyStates[this.gameState.difficulty].lives <= 0
-    ) {
-      return;
-    }
-
-    if (event.key >= "1" && event.key <= "4") {
-      const operators: Operator[] = ["+", "-", "*", "/"];
-      const operatorIndex = parseInt(event.key) - 1;
-      this.handleOperatorSelect(operators[operatorIndex]);
-    } else if (event.key === " ") {
-      this.isKeyboardMode = true;
-      if (this.selectedOperatorIndex < this.gameState.operators.length - 1) {
-        this.selectedOperatorIndex++;
-      } else if (this.gameState.operators.every((op) => op !== null)) {
-        this.confirmResult();
-      }
-    }
-  }
-
-  public handleDifficultyChange(newDifficulty: Difficulty): void {
-    if (!this.dailyGames) return;
-
-    const currentGame = this.dailyGames[this.getDifficultyKey(newDifficulty)];
-    const currentDifficultyState =
-      this.gameState.difficultyStates[newDifficulty];
-
+  private updateCurrentDifficultyScore(
+    updatedDifficultyStates: Record<Difficulty, DifficultyState>
+  ): void {
     const now = Date.now();
-    const updatedDifficultyStates = { ...this.gameState.difficultyStates };
-
     const currentState = updatedDifficultyStates[this.gameState.difficulty];
     if (!currentState.isCompleted && currentState.lives > 0) {
       const timeSinceLastUpdate = now - currentState.lastUpdate;
       const additionalScore = Math.floor(timeSinceLastUpdate / 1000);
-      currentState.score += additionalScore;
+      currentState.score = currentState.score + additionalScore;
       currentState.lastUpdate = now;
     }
+  }
+
+  private updateNewDifficultyState(
+    updatedDifficultyStates: Record<Difficulty, DifficultyState>,
+    newDifficulty: Difficulty
+  ): void {
+    const now = Date.now();
+    const currentDifficultyState =
+      this.gameState.difficultyStates[newDifficulty];
 
     updatedDifficultyStates[newDifficulty] = {
       ...currentDifficultyState,
@@ -340,19 +323,44 @@ export class MathGameHandler {
       isCompleted: currentDifficultyState.isCompleted,
       finalResult: currentDifficultyState.finalResult,
     };
+  }
+
+  private createOperatorsForDifficulty(
+    currentDifficultyState: DifficultyState
+  ): (Operator | null)[] {
+    if (currentDifficultyState.isCompleted) {
+      return (
+        currentDifficultyState.finalResult?.operators || [
+          null,
+          null,
+          null,
+          null,
+        ]
+      );
+    }
+    return [null, null, null, null];
+  }
+
+  public async handleDifficultyChange(
+    newDifficulty: Difficulty
+  ): Promise<void> {
+    if (!this.dailyGames) {
+      return;
+    }
+
+    const currentGame = this.dailyGames[this.getDifficultyKey(newDifficulty)];
+    const currentDifficultyState =
+      this.gameState.difficultyStates[newDifficulty];
+    const updatedDifficultyStates = { ...this.gameState.difficultyStates };
+
+    this.updateCurrentDifficultyScore(updatedDifficultyStates);
+    this.updateNewDifficultyState(updatedDifficultyStates, newDifficulty);
 
     this.gameState = {
       ...this.gameState,
       difficulty: newDifficulty,
       numbers: currentGame.numbers,
-      operators: currentDifficultyState.isCompleted
-        ? currentDifficultyState.finalResult?.operators || [
-            null,
-            null,
-            null,
-            null,
-          ]
-        : [null, null, null, null],
+      operators: this.createOperatorsForDifficulty(currentDifficultyState),
       result: currentDifficultyState.isCompleted
         ? currentDifficultyState.finalResult?.result || null
         : null,
@@ -361,8 +369,7 @@ export class MathGameHandler {
       difficultyStates: updatedDifficultyStates,
     };
 
-    this.selectedOperatorIndex = 0;
-    this.saveState();
+    await this.saveState();
   }
 
   private async saveHighscore(
@@ -386,122 +393,132 @@ export class MathGameHandler {
     }
   }
 
+  private async handleCorrectAnswer(result: number): Promise<void> {
+    const now = Date.now();
+    const currentState =
+      this.gameState.difficultyStates[this.gameState.difficulty];
+    const timeSinceLastUpdate = now - currentState.lastUpdate;
+    const additionalScore = Math.floor(timeSinceLastUpdate / 1000);
+    const finalScore = currentState.score + additionalScore;
+
+    if (this.userId) {
+      await this.saveHighscore(this.gameState.difficulty, finalScore);
+    }
+
+    const updatedDifficultyStates = {
+      ...this.gameState.difficultyStates,
+      [this.gameState.difficulty]: {
+        ...currentState,
+        isCompleted: true,
+        score: finalScore,
+        lastUpdate: now,
+        finalResult: {
+          numbers: this.gameState.numbers,
+          operators: this.gameState.operators,
+          result: result,
+        },
+      },
+    };
+
+    this.gameState = {
+      ...this.gameState,
+      result: result,
+      isCorrect: true,
+      isIntegerResult: Number.isInteger(result),
+      difficultyStates: updatedDifficultyStates,
+    };
+  }
+
+  private handleIncorrectAnswer(result: number): void {
+    const currentDifficultyState =
+      this.gameState.difficultyStates[this.gameState.difficulty];
+    const newLives = currentDifficultyState.lives - 1;
+    const scoreMultiplier = 3 - newLives;
+    const scoreAddition = 20;
+
+    const now = Date.now();
+    const currentState =
+      this.gameState.difficultyStates[this.gameState.difficulty];
+    const timeSinceLastUpdate = now - currentState.lastUpdate;
+    const additionalScore = Math.floor(timeSinceLastUpdate / 1000);
+    const currentScore = currentState.score + additionalScore;
+    const newScore = currentScore * scoreMultiplier + scoreAddition;
+
+    const updatedDifficultyStates = {
+      ...this.gameState.difficultyStates,
+      [this.gameState.difficulty]: {
+        ...currentState,
+        lives: newLives,
+        score: newScore,
+        lastUpdate: now,
+        previousAttempts: [
+          ...currentState.previousAttempts,
+          {
+            numbers: this.gameState.numbers,
+            operators: this.gameState.operators,
+            result: result,
+          },
+        ],
+        isCompleted: newLives <= 0,
+        ...(newLives <= 0 && {
+          finalResult: {
+            numbers: this.gameState.numbers,
+            operators: this.dailyGames
+              ? (this.dailyGames[
+                  this.getDifficultyKey(this.gameState.difficulty)
+                ].operators as Operator[])
+              : this.gameState.operators,
+            result: this.dailyGames
+              ? this.dailyGames[
+                  this.getDifficultyKey(this.gameState.difficulty)
+                ].result
+              : result,
+          },
+        }),
+      },
+    };
+
+    this.gameState = {
+      ...this.gameState,
+      result: result,
+      isIntegerResult: Number.isInteger(result),
+      isCorrect: false,
+      difficultyStates: updatedDifficultyStates,
+      operators: [null, null, null, null],
+      ...(newLives <= 0 &&
+        this.dailyGames && {
+          operators: this.dailyGames[
+            this.getDifficultyKey(this.gameState.difficulty)
+          ].operators as Operator[],
+          result:
+            this.dailyGames[this.getDifficultyKey(this.gameState.difficulty)]
+              .result,
+          isCorrect: true,
+        }),
+    };
+  }
+
   public async confirmResult(): Promise<void> {
-    if (this.gameState.operators.some((op) => op === null)) return;
+    if (this.gameState.operators.some((op) => op === null)) {
+      return;
+    }
 
     const { result } = this.calculateResult(
       this.gameState.numbers,
       this.gameState.operators as Operator[]
     );
+
     const isCorrect = this.dailyGames
       ? result ===
         this.dailyGames[this.getDifficultyKey(this.gameState.difficulty)].result
       : false;
 
     if (isCorrect) {
-      const now = Date.now();
-      const currentState =
-        this.gameState.difficultyStates[this.gameState.difficulty];
-      const timeSinceLastUpdate = now - currentState.lastUpdate;
-      const additionalScore = Math.floor(timeSinceLastUpdate / 1000);
-      const finalScore = currentState.score + additionalScore;
-
-      // Save highscore if user is logged in
-      if (this.userId) {
-        await this.saveHighscore(this.gameState.difficulty, finalScore);
-      }
-
-      const updatedDifficultyStates = {
-        ...this.gameState.difficultyStates,
-        [this.gameState.difficulty]: {
-          ...currentState,
-          isCompleted: true,
-          score: finalScore,
-          lastUpdate: now,
-          finalResult: {
-            numbers: this.gameState.numbers,
-            operators: this.gameState.operators,
-            result,
-          },
-        },
-      };
-
-      this.gameState = {
-        ...this.gameState,
-        result,
-        isCorrect: true,
-        isIntegerResult: Number.isInteger(result),
-        difficultyStates: updatedDifficultyStates,
-      };
+      await this.handleCorrectAnswer(result);
     } else {
-      const currentDifficultyState =
-        this.gameState.difficultyStates[this.gameState.difficulty];
-      const newLives = currentDifficultyState.lives - 1;
-      const scoreMultiplier = 3 - newLives;
-      const scoreAddition = 20;
-
-      const now = Date.now();
-      const currentState =
-        this.gameState.difficultyStates[this.gameState.difficulty];
-      const timeSinceLastUpdate = now - currentState.lastUpdate;
-      const additionalScore = Math.floor(timeSinceLastUpdate / 1000);
-      const currentScore = currentState.score + additionalScore;
-      const newScore = currentScore * scoreMultiplier + scoreAddition;
-
-      const updatedDifficultyStates = {
-        ...this.gameState.difficultyStates,
-        [this.gameState.difficulty]: {
-          ...currentState,
-          lives: newLives,
-          score: newScore,
-          lastUpdate: now,
-          previousAttempts: [
-            ...currentState.previousAttempts,
-            {
-              numbers: this.gameState.numbers,
-              operators: this.gameState.operators,
-              result,
-            },
-          ],
-          isCompleted: newLives <= 0,
-          ...(newLives <= 0 && {
-            finalResult: {
-              numbers: this.gameState.numbers,
-              operators: this.dailyGames
-                ? (this.dailyGames[
-                    this.getDifficultyKey(this.gameState.difficulty)
-                  ].operators as Operator[])
-                : this.gameState.operators,
-              result: this.dailyGames
-                ? this.dailyGames[
-                    this.getDifficultyKey(this.gameState.difficulty)
-                  ].result
-                : result,
-            },
-          }),
-        },
-      };
-
-      this.gameState = {
-        ...this.gameState,
-        result,
-        isIntegerResult: Number.isInteger(result),
-        isCorrect,
-        difficultyStates: updatedDifficultyStates,
-        operators: [null, null, null, null],
-        ...(newLives <= 0 &&
-          this.dailyGames && {
-            operators: this.dailyGames[
-              this.getDifficultyKey(this.gameState.difficulty)
-            ].operators as Operator[],
-            result:
-              this.dailyGames[this.getDifficultyKey(this.gameState.difficulty)]
-                .result,
-            isCorrect: true,
-          }),
-      };
+      this.handleIncorrectAnswer(result);
     }
-    this.selectedOperatorIndex = 0;
+
     this.saveState();
   }
 
@@ -509,14 +526,22 @@ export class MathGameHandler {
     return this.gameState.operators.includes(operator);
   }
 
-  private saveState(): void {
-    if (typeof window !== "undefined") {
+  private async saveState(): Promise<void> {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    try {
       const stateToSave: SavedGameState = {
         difficultyStates: this.gameState.difficultyStates,
         difficulty: this.gameState.difficulty,
         savedDate: new Date().toISOString(),
       };
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(stateToSave));
+
+      const encryptedData = await encryptData(stateToSave);
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(encryptedData));
+    } catch (error) {
+      console.error("Failed to save encrypted state:", error);
     }
   }
 
@@ -546,21 +571,27 @@ export class MathGameHandler {
     return result;
   }
 
-  public resetOperators(): void {
-    if (
-      this.gameState.difficultyStates[this.gameState.difficulty].isCompleted ||
-      this.gameState.difficultyStates[this.gameState.difficulty].lives <= 0
-    ) {
-      return;
-    }
-
-    const currentDifficultyState =
-      this.gameState.difficultyStates[this.gameState.difficulty];
+  private calculateResetScore(currentDifficultyState: DifficultyState): number {
     const now = Date.now();
     const timeSinceLastUpdate = now - currentDifficultyState.lastUpdate;
     const additionalScore = Math.floor(timeSinceLastUpdate / 1000);
     const currentScore = currentDifficultyState.score + additionalScore;
-    const newScore = currentScore + 20; // Add 20 points for resetting
+    return currentScore + 20; // Add 20 points for resetting
+  }
+
+  public async resetOperators(): Promise<void> {
+    const currentDifficultyState =
+      this.gameState.difficultyStates[this.gameState.difficulty];
+
+    if (
+      currentDifficultyState.isCompleted ||
+      currentDifficultyState.lives <= 0
+    ) {
+      return;
+    }
+
+    const newScore = this.calculateResetScore(currentDifficultyState);
+    const now = Date.now();
 
     const updatedDifficultyStates = {
       ...this.gameState.difficultyStates,
@@ -578,14 +609,7 @@ export class MathGameHandler {
       isCorrect: false,
       difficultyStates: updatedDifficultyStates,
     };
-    this.selectedOperatorIndex = 0;
 
-    // Save the updated state to localStorage
-    const stateToSave: SavedGameState = {
-      difficultyStates: updatedDifficultyStates,
-      difficulty: this.gameState.difficulty,
-      savedDate: new Date().toISOString(),
-    };
-    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(stateToSave));
+    await this.saveState();
   }
 }

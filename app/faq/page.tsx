@@ -4,7 +4,7 @@ import React from "react";
 
 export default function FAQPage() {
   return (
-    <main className="min-h-screen px-4 py-12 bg-white text-gray-900 dark:bg-gray-800 dark:text-white">
+    <main className="min-h-screen px-4 py-25 bg-white text-gray-900 dark:bg-gray-800 dark:text-white">
       <div className="max-w-3xl mx-auto space-y-10">
         <h1 className="text-4xl font-bold text-center">FAQ</h1>
 

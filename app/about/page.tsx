@@ -4,7 +4,7 @@ import React from "react";
 
 export default function AboutPage() {
   return (
-    <main className="min-h-screen px-4 py-12 bg-white text-gray-900 dark:bg-gray-800 dark:text-white">
+    <main className="min-h-screen px-4 py-25 bg-white text-gray-900 dark:bg-gray-800 dark:text-white">
       <div className="max-w-2xl mx-auto space-y-6 text-center">
         <h1 className="text-4xl font-bold">Über unser Projekt</h1>
         <p className="text-lg">
