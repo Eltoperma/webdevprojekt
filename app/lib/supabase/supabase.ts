@@ -7,11 +7,11 @@ export const supabase = createClient(
 
 export const supabaseLocal = createClient(
   process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!, // oder anon key – je nach Kontext
+  process.env.SUPABASE_SERVICE_ROLE_KEY!, 
   {
     global: {
       headers: {
-        apikey: process.env.SUPABASE_SERVICE_ROLE_KEY!, // oder anon key
+        apikey: process.env.SUPABASE_SERVICE_ROLE_KEY!, 
       },
     },
   }

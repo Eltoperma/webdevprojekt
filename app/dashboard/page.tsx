@@ -17,8 +17,8 @@ export default async function DashboardPage() {
     .eq("id", session.user.id)
     .single();
 
-  if (!user || error) {
-    redirect("/login?redirect=/dashboard"); // oder Fehler anzeigen
+  if (!user) {
+    redirect("/login?redirect=/dashboard");
   }
 
   return <DashboardForm user={user} />;
