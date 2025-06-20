@@ -8,7 +8,7 @@ async function simpleHash(data: string): Promise<string> {
 }
 
 // Secret key for additional security (in production, this should be more complex)
-const SECRET_KEY = "math-game-secret-2024";
+const SECRET_KEY = "jl235hbb235jk12a63df!4576&";
 
 export interface EncryptedData {
   data: string;
